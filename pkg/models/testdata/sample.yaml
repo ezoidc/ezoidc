@@ -1,0 +1,33 @@
+policy: |-
+  allow.read(_)
+
+audience:
+- audience1
+- audience2
+
+listen: 127.0.0.1:8080
+log_level: warn
+
+variables:
+  str: "str"
+
+  strvalue:
+    value: "strvalue"
+  
+  strprovider:
+    value:
+      string: "strprovider"
+
+  fromenv:
+    value:
+      env: ENV_KEY
+    redact: true
+
+issuers:
+  selfhosted:
+    issuer: https://id.example.com
+    jwks_uri: https://id.example.com/.well-known/openid-configuration/jwks
+  jwks:
+    issuer: https://cluster.local
+    jwks: |
+      {"keys":[{"use":"sig","kty":"RSA","kid":"kid","alg":"RS256","n":"AAAA","e":"AQAB"}]}

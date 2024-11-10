@@ -1,0 +1,6 @@
+.env
+*.env
+/ezoidc
+/ezoidc-server
+/coverage*
+/*.tgz

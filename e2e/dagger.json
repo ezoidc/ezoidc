@@ -1,0 +1,8 @@
+{
+  "name": "e2e",
+  "sdk": "go",
+  "dependencies": [
+  ],
+  "source": ".",
+  "engineVersion": "v0.13.5"
+}

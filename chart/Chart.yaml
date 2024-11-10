@@ -1,0 +1,7 @@
+apiVersion: v2
+name: chart
+description: A Helm chart for ezoidc-server
+
+type: application
+version: 1.0.0
+appVersion: "v0.4.0"
