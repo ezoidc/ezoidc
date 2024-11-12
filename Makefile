@@ -1,7 +1,7 @@
 TARGETS := ezoidc ezoidc-server
 SRC := $(shell find pkg cmd -name '*.go' -not -path '*_test.go')
 
-.PHONY: build clean format lint test coverage ko.push
+.PHONY: build clean format lint test coverage ko.push lint.rego lint.go format.rego format.go
 
 build: $(TARGETS)
 
@@ -14,11 +14,23 @@ ezoidc: $(SRC)
 ezoidc-server: $(SRC)
 	go build ./cmd/ezoidc-server
 
-format:
+format: format.go format.rego
+
+format.go:
 	go fmt ./...
 
-lint:
-	golangci-lint run
+format.rego:
+	opa fmt . -w
+
+lint: lint.go lint.rego
+
+lint.go: golangci-lint ?= golangci-lint
+lint.go:
+	$(golangci-lint) run
+
+lint.rego: regal ?= regal
+lint.rego:
+	$(regal) lint .
 
 test:
 	go test ./pkg/... -v
