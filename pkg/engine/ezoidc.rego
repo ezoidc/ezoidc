@@ -2,18 +2,22 @@ package ezoidc
 
 import rego.v1
 
+# regal ignore:constant-condition
 allow.read(name) if false
 
+# regal ignore:constant-condition
 allow.internal(name) if false
 
+# regal ignore:constant-condition
 define.nil if false
 
 issuers[key] := data.issuers[key]
 
 claims[key] := input.claims[key]
 
-read(name) := value if {
-	value := variables[name].value.string
+read(name) := var.value.string if {
+	some var in input.variables
+	var.name == name
 } else if {
 	print(sprintf("warn: read: failed to read variable '%s'", [name]))
 	false
@@ -24,6 +28,7 @@ variables[var.name][field] := var[field] if {
 }
 
 issuer := name if {
+	some name
 	issuers[name].issuer == input.claims.iss
 }
 
@@ -40,7 +45,7 @@ _variable_scope(name) := "read" if {
 	allow.internal(name)
 }
 
-_queries.variables_response contains var if {
+_queries.variables_response contains object.union(vars, defs)[_] if {
 	vars := {var.name: var |
 		input.allow[name] == "read"
 		var := variables[_]
@@ -50,17 +55,12 @@ _queries.variables_response contains var if {
 		input.allow[name] == "read"
 		def := define[name]
 	}
-	var := object.union(vars, defs)[_]
 }
 
 # Utilities
 fetch(options) := response if {
-	request := object.union({
-		"method": "GET",
-		"headers": {
-			"User-Agent": sprintf("ezoidc/%s", [data.version]),
-		},
-	}, options)
+	headers := {"User-Agent": sprintf("ezoidc/%s", [data.version])} # regal ignore:external-reference
+	request := object.union({"method": "GET", "headers": headers}, options)
 	response := _fetch_log_http_send(request)
 }
 
@@ -110,7 +110,7 @@ cloudflare_r2_temporary_credentials(options) := response if {
 		"objects": object.get(options, "objects", null),
 		"prefixes": object.get(options, "prefixes", null),
 	}
-	body := {k: v | v := defaults[k]; v != null}
+	body := {k: v | v := defaults[k]; v != null} # regal ignore:unused-output-variable
 	response := fetch({
 		"url": url,
 		"method": "POST",
