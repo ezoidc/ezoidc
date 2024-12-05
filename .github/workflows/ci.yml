@@ -37,11 +37,17 @@ jobs:
 
   zizmor:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
         with:
           persist-credentials: false
-      - run: brew install zizmor
+      - run: |
+          echo "/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin" >> $GITHUB_PATH
+      - run: |
+          brew install zizmor
       - run: |
           zizmor --format sarif . > results.sarif
         env:
