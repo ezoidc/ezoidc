@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -44,14 +45,48 @@ var startCmd = &cobra.Command{
 			return err
 		}
 
-		engine := engine.NewEngine(config)
-		err = engine.Compile(ctx)
+		eng := engine.NewEngine(config)
+		err = eng.Compile(ctx)
 		if err != nil {
 			return err
 		}
 
 		gin.SetMode(gin.ReleaseMode)
-		return server.NewAPI(engine).Run()
+		return server.NewAPI(eng).Run()
+	},
+}
+
+var testClaims string
+var testVariablesCmd = &cobra.Command{
+	Use:   "variables",
+	Short: "Allowed variables given the provided claims",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		var res engine.ReadResponse
+		var claims map[string]any
+		err := json.Unmarshal([]byte(testClaims), &claims)
+		if err != nil {
+			return err
+		}
+
+		ctx := cmd.Context()
+		config, err := models.ReadConfiguration(configPath)
+		if err != nil {
+			return err
+		}
+
+		eng := engine.NewEngine(config)
+		err = eng.Compile(ctx)
+		if err != nil {
+			return err
+		}
+
+		allowed, err := eng.Allowed(ctx, claims)
+		if err != nil {
+			return err
+		}
+		res.Allowed = allowed
+
+		return models.JSONEncoder(os.Stdout).Encode(res)
 	},
 }
 
@@ -66,6 +101,15 @@ func main() {
 	}
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(startCmd)
+
+	testCmd := &cobra.Command{
+		Use:   "test",
+		Short: "Test the server configuration",
+	}
+	rootCmd.AddCommand(testCmd)
+	testCmd.AddCommand(testVariablesCmd)
+
+	testVariablesCmd.Flags().StringVar(&testClaims, "claims", "{}", "Claims to use for the test")
 
 	startCmd.Flags().StringVarP(&configPath,
 		"config", "c", "config.yaml",
