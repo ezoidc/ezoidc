@@ -3,7 +3,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -12,6 +11,7 @@ import (
 
 	"al.essio.dev/pkg/shellescape"
 	"github.com/ezoidc/ezoidc/pkg/client"
+	"github.com/ezoidc/ezoidc/pkg/models"
 	"github.com/ezoidc/ezoidc/pkg/static"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
@@ -54,9 +54,7 @@ var variablesJsonCmd = &cobra.Command{
 			return err
 		}
 
-		encoder := json.NewEncoder(os.Stdout)
-		encoder.SetIndent("", "  ")
-		return encoder.Encode(variablesResponse)
+		return models.JSONEncoder(os.Stdout).Encode(variablesResponse)
 	},
 }
 

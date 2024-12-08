@@ -46,8 +46,8 @@ type EngineInput struct {
 }
 
 type ReadResponse struct {
-	Variables []models.Variable
-	Allowed   map[string]string
+	Variables []models.Variable `json:"variables,omitempty"`
+	Allowed   map[string]string `json:"allowed"`
 }
 
 // Create a new policy engine using default variable resolvers
