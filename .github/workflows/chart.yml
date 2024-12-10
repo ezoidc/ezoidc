@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
         with:
           persist-credentials: false
-      - uses: azure/setup-helm@73f3a866be3c4a3b63ce5f6dc59a1c5a992f4a2c # v4
+      - uses: azure/setup-helm@fe7b79cd5ee1e45176fcad797de68ecaf3ca4814 # v4
       - name: Login to GitHub Container Registry
         env:
           ACTOR: ${{ github.actor }}

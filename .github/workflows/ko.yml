@@ -23,5 +23,5 @@ jobs:
           cache: false
       - uses: ko-build/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
         with:
-          version: tip # --image-annotation
+          version: v0.17.1
       - run: make ko.push
