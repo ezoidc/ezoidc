@@ -41,6 +41,11 @@ func NewAPI(eng *engine.Engine) *API {
 				})
 				return
 			}
+			params := []string{}
+			for k := range body.Params {
+				params = append(params, k)
+			}
+			c.Set("params", params)
 		}
 
 		claims := c.GetStringMap("claims")
@@ -53,6 +58,7 @@ func NewAPI(eng *engine.Engine) *API {
 			return
 		}
 		c.Set("allowed", response.Allowed)
+
 		c.JSON(200, models.VariablesResponse{Variables: response.Variables})
 	})
 
@@ -93,6 +99,11 @@ func jsonLogs() gin.HandlerFunc {
 				iss, _ := claims["iss"].(string)
 				line = line.Str("sub", sub).Str("iss", iss)
 			}
+
+			if params, ok := params.Keys["params"].([]string); ok {
+				line = line.Strs("params", params)
+			}
+
 			line.Send()
 			return ""
 		},
