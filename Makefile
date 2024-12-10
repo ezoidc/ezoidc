@@ -26,7 +26,7 @@ lint: lint.go lint.rego
 
 lint.go: golangci-lint ?= golangci-lint
 lint.go:
-	$(golangci-lint) run
+	$(golangci-lint) run --timeout=10m
 
 lint.rego: regal ?= regal
 lint.rego:
@@ -55,7 +55,7 @@ ko.push:
 	--sbom "none" \
 	$(foreach label,$(OCI_LABELS),--image-annotation $(label) --image-label $(label)) \
 	--tags latest$(foreach tag,$(GIT_VERSION),,$(tag)) \
-	./ko/server ./ko/cli 
+	./ko/server ./ko/cli
 
 helm.push:
 	helm package ./chart

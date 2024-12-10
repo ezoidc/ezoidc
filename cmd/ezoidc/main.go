@@ -156,7 +156,7 @@ func main() {
 		"Override the host address of the server (env: EZOIDC_HOST)")
 
 	state.paramsList = variablesCmd.PersistentFlags().
-		StringArrayP("param", "p", nil, "Provide a single parameter")
+		StringArrayP("param", "p", nil, "Parameter name=value to include in the request")
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
