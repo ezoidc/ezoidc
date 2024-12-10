@@ -21,9 +21,11 @@ import (
 )
 
 type State struct {
-	host      string
-	token     string
-	tokenPath string
+	host       string
+	token      string
+	tokenPath  string
+	paramsList *[]string
+	params     map[string]any
 }
 
 var state State
@@ -49,7 +51,10 @@ var variablesJsonCmd = &cobra.Command{
 	Short: "Read variables in JSON format",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		variablesResponse, err := client.NewAPIClient(http.DefaultClient, state.host).
-			GetVariables(context.Background(), state.token)
+			GetVariables(context.Background(), &models.VariablesRequest{
+				Token:  state.token,
+				Params: state.params,
+			})
 		if err != nil {
 			return err
 		}
@@ -63,7 +68,10 @@ var variablesEnvCmd = &cobra.Command{
 	Short: "Read variables in ENV format",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		variablesResponse, err := client.NewAPIClient(http.DefaultClient, state.host).
-			GetVariables(context.Background(), state.token)
+			GetVariables(context.Background(), &models.VariablesRequest{
+				Token:  state.token,
+				Params: state.params,
+			})
 		if err != nil {
 			return err
 		}
@@ -88,7 +96,10 @@ var variablesExecCmd = &cobra.Command{
 	Short: "Execute a command with environment variables set",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		variablesResponse, err := client.NewAPIClient(http.DefaultClient, state.host).
-			GetVariables(context.Background(), state.token)
+			GetVariables(context.Background(), &models.VariablesRequest{
+				Token:  state.token,
+				Params: state.params,
+			})
 		if err != nil {
 			return err
 		}
@@ -144,6 +155,9 @@ func main() {
 		"host", os.Getenv("EZOIDC_HOST"),
 		"Override the host address of the server (env: EZOIDC_HOST)")
 
+	state.paramsList = variablesCmd.PersistentFlags().
+		StringArrayP("param", "p", nil, "Provide a single parameter")
+
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
@@ -194,6 +208,15 @@ func (s *State) prepare() error {
 	if state.host == "" {
 		host, _ := audience(state.token)
 		state.host = host
+	}
+
+	state.params = map[string]any{}
+	for _, param := range *s.paramsList {
+		parts := strings.SplitN(param, "=", 2)
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid param: %s", param)
+		}
+		state.params[parts[0]] = parts[1]
 	}
 
 	return nil

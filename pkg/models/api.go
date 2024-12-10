@@ -5,6 +5,11 @@ type MetadataResponse struct {
 	APIVersion string `json:"api_version"`
 }
 
+type VariablesRequest struct {
+	Token  string         `json:"-"`
+	Params map[string]any `json:"params"`
+}
+
 type VariablesResponse struct {
 	Variables []Variable `json:"variables"`
 }
@@ -12,8 +17,4 @@ type VariablesResponse struct {
 type ErrorResponse struct {
 	Error  string `json:"error"`
 	Reason string `json:"reason,omitempty"`
-}
-
-type VariablesRequest struct {
-	Params map[string]any `json:"params"`
 }
