@@ -57,13 +57,19 @@ var startCmd = &cobra.Command{
 }
 
 var testClaims string
+var testParams string
 var testVariablesCmd = &cobra.Command{
 	Use:   "variables",
 	Short: "Allowed variables given the provided claims",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var res engine.ReadResponse
 		var claims map[string]any
+		var params map[string]any
 		err := json.Unmarshal([]byte(testClaims), &claims)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal([]byte(testParams), &params)
 		if err != nil {
 			return err
 		}
@@ -80,7 +86,10 @@ var testVariablesCmd = &cobra.Command{
 			return err
 		}
 
-		allowed, err := eng.Allowed(ctx, claims)
+		allowed, err := eng.AllowedVariables(ctx, &engine.ReadRequest{
+			Claims: claims,
+			Params: params,
+		})
 		if err != nil {
 			return err
 		}
@@ -110,6 +119,7 @@ func main() {
 	testCmd.AddCommand(testVariablesCmd)
 
 	testVariablesCmd.Flags().StringVar(&testClaims, "claims", "{}", "Claims to use for the test")
+	testVariablesCmd.Flags().StringVar(&testParams, "params", "{}", "Params to use for the test")
 
 	startCmd.Flags().StringVarP(&configPath,
 		"config", "c", "config.yaml",
