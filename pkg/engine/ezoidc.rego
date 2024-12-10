@@ -15,6 +15,8 @@ issuers[key] := data.issuers[key]
 
 claims[key] := input.claims[key]
 
+params[key] := input.params[key]
+
 read(name) := var.value.string if {
 	some var in input.variables
 	var.name == name

@@ -1,6 +1,8 @@
 package server
 
 import (
+	"fmt"
+
 	"github.com/ezoidc/ezoidc/pkg/engine"
 	"github.com/ezoidc/ezoidc/pkg/models"
 	"github.com/gin-gonic/gin"
@@ -15,7 +17,7 @@ type API struct {
 	Engine *engine.Engine
 }
 
-func NewAPI(engine *engine.Engine) *API {
+func NewAPI(eng *engine.Engine) *API {
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(requestID())
@@ -29,10 +31,23 @@ func NewAPI(engine *engine.Engine) *API {
 		})
 	})
 
-	auth := public.Group("/1.0", BearerToken(), ValidToken(engine.Configuration))
-	auth.GET("/variables", func(c *gin.Context) {
+	auth := public.Group("/1.0", BearerToken(), ValidToken(eng.Configuration))
+	auth.Match([]string{"GET", "POST"}, "/variables", func(c *gin.Context) {
+		var body models.VariablesRequest
+		if c.Request.Method == "POST" {
+			if err := c.ShouldBindJSON(&body); err != nil {
+				c.JSON(400, models.ErrorResponse{
+					Error: fmt.Sprintf("invalid JSON request body: %s", err.Error()),
+				})
+				return
+			}
+		}
+
 		claims := c.GetStringMap("claims")
-		response, err := engine.Read(c, claims)
+		response, err := eng.ReadVariables(c, &engine.ReadRequest{
+			Claims: claims,
+			Params: body.Params,
+		})
 		if err != nil {
 			c.JSON(400, models.ErrorResponse{Error: err.Error()})
 			return
@@ -41,7 +56,7 @@ func NewAPI(engine *engine.Engine) *API {
 		c.JSON(200, models.VariablesResponse{Variables: response.Variables})
 	})
 
-	return &API{router, engine}
+	return &API{router, eng}
 }
 
 func (a *API) Run() error {

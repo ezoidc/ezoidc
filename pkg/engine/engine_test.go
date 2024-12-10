@@ -25,7 +25,7 @@ func TestCompile(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestAllowed(t *testing.T) {
+func TestAllowedVariables(t *testing.T) {
 	ctx := context.TODO()
 	cfg := &models.Configuration{
 		Policy: `
@@ -39,7 +39,7 @@ func TestAllowed(t *testing.T) {
 	err := e.Compile(ctx)
 	assert.NoError(t, err)
 
-	allowed, err := e.Allowed(ctx, nil)
+	allowed, err := e.AllowedVariables(ctx, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, map[string]string{
 		"var":      "read",
@@ -47,10 +47,17 @@ func TestAllowed(t *testing.T) {
 	}, allowed)
 }
 
-func TestRead(t *testing.T) {
+func TestReadVariables(t *testing.T) {
 	cfg := &models.Configuration{
 		Policy: `
-			allow.read(name) if name in {"allowed", "defined"}
+			allow.read(name) if {
+				name in {"allowed", "defined"}
+				issuer = "test"
+				subject = "read"
+				claims.iss = "http://test"
+				claims.custom = true
+				params.id = 123
+			}
 			define.defined.value = "foo"
 			define.defined_not_allowed.value = "no"
 		`,
@@ -58,13 +65,27 @@ func TestRead(t *testing.T) {
 			{Name: "not-allowed", Value: models.VariableValue{Provider: "string", ID: "asdf"}},
 			{Name: "allowed", Value: models.VariableValue{Provider: "string", ID: "bar"}, Redact: &true_},
 		},
+		Issuers: map[string]*models.Issuer{
+			"test": {
+				Issuer: "http://test",
+			},
+		},
 	}
 	e := NewEngine(cfg)
 	ctx := context.TODO()
 	err := e.Compile(ctx)
 	assert.NoError(t, err)
 
-	output, err := e.Read(ctx, nil)
+	output, err := e.ReadVariables(ctx, &ReadRequest{
+		Claims: map[string]any{
+			"iss":    "http://test",
+			"sub":    "read",
+			"custom": true,
+		},
+		Params: map[string]any{
+			"id": 123,
+		},
+	})
 	assert.NoError(t, err)
 
 	assert.ElementsMatch(t, []models.Variable{
@@ -92,7 +113,7 @@ func TestReadInternal(t *testing.T) {
 	err := e.Compile(ctx)
 	assert.NoError(t, err)
 
-	output, err := e.Read(ctx, nil)
+	output, err := e.ReadVariables(ctx, nil)
 	assert.NoError(t, err)
 
 	assert.ElementsMatch(t, []models.Variable{
@@ -117,7 +138,7 @@ func TestReadEnv(t *testing.T) {
 	err := e.Compile(ctx)
 	assert.NoError(t, err)
 
-	output, err := e.Read(ctx, nil)
+	output, err := e.ReadVariables(ctx, nil)
 	assert.NoError(t, err)
 
 	assert.ElementsMatch(t, []models.Variable{
@@ -144,7 +165,7 @@ func TestReadDynamicExport(t *testing.T) {
 	err := e.Compile(ctx)
 	assert.NoError(t, err)
 
-	output, err := e.Read(ctx, nil)
+	output, err := e.ReadVariables(ctx, nil)
 	assert.NoError(t, err)
 
 	assert.ElementsMatch(t, []models.Variable{
@@ -183,7 +204,7 @@ func TestPrintLevels(t *testing.T) {
 	err := e.Compile(ctx)
 	assert.NoError(t, err)
 
-	_, err = e.Read(ctx, nil)
+	_, err = e.ReadVariables(ctx, nil)
 	assert.NoError(t, err)
 	assert.Contains(t, buf.String(), `{"level":"debug","request_id":"123","location":"policy.rego:4","message":"msg"}`)
 	assert.Contains(t, buf.String(), `{"level":"warn","request_id":"123","location":"policy.rego:5","message":"msg"}`)
@@ -209,7 +230,7 @@ func TestDuplicateVariables(t *testing.T) {
 	err := e.Compile(ctx)
 	assert.NoError(t, err)
 
-	output, err := e.Read(ctx, nil)
+	output, err := e.ReadVariables(ctx, nil)
 	assert.NoError(t, err)
 
 	assert.ElementsMatch(t, []models.Variable{

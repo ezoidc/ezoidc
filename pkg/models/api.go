@@ -13,3 +13,7 @@ type ErrorResponse struct {
 	Error  string `json:"error"`
 	Reason string `json:"reason,omitempty"`
 }
+
+type VariablesRequest struct {
+	Params map[string]any `json:"params"`
+}

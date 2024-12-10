@@ -43,11 +43,22 @@ type EngineInput struct {
 	Claims map[string]any `json:"claims"`
 	// Variable names and their allowed scope (read or internal)
 	Allow map[string]string `json:"allow"`
+	// User-provided parameters
+	Params map[string]any `json:"params"`
+}
+
+type ReadRequest struct {
+	// Validated JWT claims
+	Claims map[string]any `json:"claims"`
+	// User-provided parameters
+	Params map[string]any `json:"params"`
 }
 
 type ReadResponse struct {
+	// Allowed variable values
 	Variables []models.Variable `json:"variables,omitempty"`
-	Allowed   map[string]string `json:"allowed"`
+	// Allowed variable names and their scope
+	Allowed map[string]string `json:"allowed"`
 }
 
 // Create a new policy engine using default variable resolvers
@@ -116,12 +127,12 @@ func (e *Engine) Compile(ctx context.Context) error {
 }
 
 // Given validated claims, determine allowed variables name and scope
-func (e *Engine) Allowed(ctx context.Context, claims map[string]any) (map[string]string, error) {
+func (e *Engine) AllowedVariables(ctx context.Context, req *ReadRequest) (map[string]string, error) {
 	allowed := map[string]string{}
 	input := &EngineInput{
-		Query:  QueryAllowedVariables,
-		Claims: claims,
+		Query: QueryAllowedVariables,
 	}
+	input.setRequest(req)
 	err := e.eval(ctx, input, &allowed)
 	if err != nil {
 		return nil, err
@@ -130,8 +141,8 @@ func (e *Engine) Allowed(ctx context.Context, claims map[string]any) (map[string
 }
 
 // Given validated claims, read allowed variable values
-func (e *Engine) Read(ctx context.Context, claims map[string]any) (*ReadResponse, error) {
-	allowed, err := e.Allowed(ctx, claims)
+func (e *Engine) ReadVariables(ctx context.Context, req *ReadRequest) (*ReadResponse, error) {
+	allowed, err := e.AllowedVariables(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -152,9 +163,9 @@ func (e *Engine) Read(ctx context.Context, claims map[string]any) (*ReadResponse
 	input := &EngineInput{
 		Query:     QueryVariablesResponse,
 		Variables: resolvedVariables,
-		Claims:    claims,
 		Allow:     allowed,
 	}
+	input.setRequest(req)
 	err = e.eval(ctx, input, &response.Variables)
 	if err != nil {
 		return nil, err
@@ -203,4 +214,13 @@ func (e *Engine) eval(ctx context.Context, input *EngineInput, out interface{}) 
 	}
 
 	return json.Unmarshal(data, out)
+}
+
+func (i *EngineInput) setRequest(req *ReadRequest) {
+	if req == nil {
+		return
+	}
+
+	i.Claims = req.Claims
+	i.Params = req.Params
 }
