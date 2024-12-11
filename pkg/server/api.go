@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/ezoidc/ezoidc/pkg/engine"
 	"github.com/ezoidc/ezoidc/pkg/models"
@@ -11,6 +12,7 @@ import (
 )
 
 var APIVersion = "1.0"
+var MaxBodySize int64 = 1024 * 1024 * 5 // 5MB
 
 type API struct {
 	Gin    *gin.Engine
@@ -20,6 +22,7 @@ type API struct {
 func NewAPI(eng *engine.Engine) *API {
 	router := gin.New()
 	router.Use(gin.Recovery())
+	router.Use(maxBodySize())
 	router.Use(requestID())
 	router.Use(jsonLogs())
 
@@ -115,5 +118,12 @@ func requestID() gin.HandlerFunc {
 		rid := uuid.New().String()
 		ctx.Set("request_id", rid)
 		ctx.Header("X-Request-ID", rid)
+	}
+}
+
+func maxBodySize() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, MaxBodySize)
+		c.Next()
 	}
 }
