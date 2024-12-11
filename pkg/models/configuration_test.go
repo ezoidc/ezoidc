@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/go-jose/go-jose/v4"
@@ -17,7 +18,7 @@ func init() {
 
 func TestReadConfiguration(t *testing.T) {
 	jwks := &jose.JSONWebKeySet{}
-	_ = jwks.UnmarshalJSON([]byte(`{"keys":[{"use":"sig","kty":"RSA","kid":"kid","alg":"RS256","n":"AAAA","e":"AQAB"}]}`))
+	_ = json.Unmarshal([]byte(`{"keys":[{"use":"sig","kty":"RSA","kid":"kid","alg":"RS256","n":"AAAA","e":"AQAB"}]}`), jwks)
 	cases := []struct {
 		path     string
 		expected *Configuration

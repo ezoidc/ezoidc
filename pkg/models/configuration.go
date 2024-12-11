@@ -177,7 +177,7 @@ func (o *JWKS) UnmarshalYAML(node *yaml.Node) error {
 	var jwks jose.JSONWebKeySet
 	switch node.Kind {
 	case yaml.ScalarNode:
-		err := jwks.UnmarshalJSON([]byte(node.Value))
+		err := json.Unmarshal([]byte(node.Value), &jwks)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal JWKS: %v", err)
 		}
