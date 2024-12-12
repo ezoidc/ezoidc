@@ -1,4 +1,9 @@
 # ezoidc
+[![Go Reference](https://pkg.go.dev/badge/github.com/ezoidc/ezoidc.svg)](https://pkg.go.dev/github.com/ezoidc/ezoidc) &nbsp;
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE) &nbsp;
+[![Build](https://img.shields.io/github/actions/workflow/status/ezoidc/ezoidc/ci.yml?label=CI)](https://github.com/ezoidc/ezoidc/actions/workflows/ci.yml?query=branch%3Amain&label=CI) &nbsp; 
+![GitHub Tag](https://img.shields.io/github/v/tag/ezoidc/ezoidc?label=version)
+
 
 _Policy-based access control for environment variables using federated identities._
 
