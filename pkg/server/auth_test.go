@@ -240,13 +240,15 @@ func TestBearerToken(t *testing.T) {
 	})
 
 	for id, c := range cases {
-		req, _ := http.NewRequest("GET", "/", nil)
-		w := httptest.NewRecorder()
-		if c.header != "" {
-			req.Header.Set("Authorization", c.header)
-		}
-		g.ServeHTTP(w, req)
-		assert.Equal(t, c.status, w.Code, id)
-		assert.Equal(t, c.body, w.Body.String(), id)
+		t.Run(id, func(t *testing.T) {
+			req, _ := http.NewRequest("GET", "/", nil)
+			w := httptest.NewRecorder()
+			if c.header != "" {
+				req.Header.Set("Authorization", c.header)
+			}
+			g.ServeHTTP(w, req)
+			assert.Equal(t, c.status, w.Code, id)
+			assert.Equal(t, c.body, w.Body.String(), id)
+		})
 	}
 }

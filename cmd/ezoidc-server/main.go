@@ -121,7 +121,7 @@ func main() {
 	testVariablesCmd.Flags().StringVar(&testClaims, "claims", "{}", "Claims to use for the test")
 	testVariablesCmd.Flags().StringVar(&testParams, "params", "{}", "Params to use for the test")
 
-	startCmd.Flags().StringVarP(&configPath,
+	rootCmd.PersistentFlags().StringVarP(&configPath,
 		"config", "c", "config.yaml",
 		"Path to the configuration file",
 	)
