@@ -90,7 +90,7 @@ func (m *E2E) TestAws(ctx context.Context) error {
 		WithEnvVariable("AWS_SECRET_ACCESS_KEY", "ignored").
 		WithMountedFile("/bin/ezoidc-server", m.EzoidcServer).
 		WithNewFile("/config.yaml", config.MarshalYAML()).
-		WithExec([]string{"/bin/ezoidc-server", "/config.yaml"}).
+		WithExec([]string{"/bin/ezoidc-server", "start", "/config.yaml"}).
 		WithExposedPort(3501).
 		AsService()
 

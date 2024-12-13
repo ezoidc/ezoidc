@@ -1,0 +1,21 @@
+name: E2E
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        with:
+          persist-credentials: false
+      - uses: dagger/dagger-for-github@11569d757d716331433172d27b85beb58ab93351 # v6
+        with:
+          module: ./e2e
+          args: build --src .:go run
