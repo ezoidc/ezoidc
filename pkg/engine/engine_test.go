@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"context"
 	"os"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/ezoidc/ezoidc/pkg/models"
 	"github.com/gin-gonic/gin"
+	"github.com/pquerna/otp/totp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
@@ -235,5 +238,53 @@ func TestDuplicateVariables(t *testing.T) {
 
 	assert.ElementsMatch(t, []models.Variable{
 		{Name: "dupe", Value: models.VariableValue{String: "define"}, Export: "VAR"},
+	}, output.Variables)
+}
+
+func TestTotpVerify(t *testing.T) {
+	ctx := context.TODO()
+	k, _ := totp.Generate(totp.GenerateOpts{
+		Issuer:      "test",
+		AccountName: "test",
+	})
+	code, _ := totp.GenerateCode(k.Secret(), time.Now())
+	cfg := &models.Configuration{
+		Policy: `
+		    allow.read("allowed")
+			allow.internal("secret")
+
+			define.allowed.value = "true" if {
+			  totp_verify({
+			    "code": params.code,
+				"secret": read("secret"),
+			  })
+			}
+		`,
+		Variables: []models.Variable{
+			{Name: "secret", Value: models.VariableValue{Provider: "string", ID: k.Secret()}},
+		},
+	}
+	e := NewEngine(cfg)
+	err := e.Compile(ctx)
+	assert.NoError(t, err)
+
+	output, err := e.ReadVariables(ctx, &ReadRequest{
+		Params: map[string]any{"code": code},
+	})
+	assert.NoError(t, err)
+
+	assert.ElementsMatch(t, []models.Variable{
+		{Name: "allowed", Value: models.VariableValue{String: "true"}},
+	}, output.Variables)
+
+	// Accept the code as an integer
+	codeInt, _ := strconv.Atoi(code)
+	output, err = e.ReadVariables(ctx, &ReadRequest{
+		Params: map[string]any{"code": codeInt},
+	})
+	assert.NoError(t, err)
+
+	assert.ElementsMatch(t, []models.Variable{
+		{Name: "allowed", Value: models.VariableValue{String: "true"}},
 	}, output.Variables)
 }
