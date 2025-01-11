@@ -4,3 +4,4 @@
 /ezoidc-server
 /coverage*
 /*.tgz
+/.vscode

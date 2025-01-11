@@ -37,7 +37,9 @@ func (m *E2E) Localstack() *dagger.Service {
 		WithEnvVariable("DEBUG", "1").
 		WithNewFile("/etc/localstack/init/ready.d/ssm.sh", localstackInit, dagger.ContainerWithNewFileOpts{Permissions: 0o755}).
 		WithExposedPort(4566).
-		AsService()
+		AsService(dagger.ContainerAsServiceOpts{
+			UseEntrypoint: true,
+		})
 }
 
 func (m *E2E) TestAws(ctx context.Context) error {
@@ -90,9 +92,10 @@ func (m *E2E) TestAws(ctx context.Context) error {
 		WithEnvVariable("AWS_SECRET_ACCESS_KEY", "ignored").
 		WithMountedFile("/bin/ezoidc-server", m.EzoidcServer).
 		WithNewFile("/config.yaml", config.MarshalYAML()).
-		WithExec([]string{"/bin/ezoidc-server", "start", "/config.yaml"}).
 		WithExposedPort(3501).
-		AsService()
+		AsService(dagger.ContainerAsServiceOpts{
+			Args: []string{"/bin/ezoidc-server", "start", "/config.yaml"},
+		})
 
 	output, err := dag.Container().
 		From(baseImage).

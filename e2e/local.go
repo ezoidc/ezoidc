@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"dagger/e-2-e/internal/dagger"
 	"encoding/json"
 	"time"
 
@@ -44,9 +45,10 @@ func (m *E2E) TestLocal(ctx context.Context) error {
 		WithNewFile("/config.yaml", config.MarshalYAML()).
 		WithEnvVariable("ENV_VAR", "value").
 		WithNewFile("/file.txt", "content").
-		WithExec([]string{"/bin/ezoidc-server", "start", "/config.yaml"}).
 		WithExposedPort(3501).
-		AsService()
+		AsService(dagger.ContainerAsServiceOpts{
+			Args: []string{"/bin/ezoidc-server", "start", "/config.yaml"},
+		})
 
 	output, err := dag.Container().
 		From(baseImage).
