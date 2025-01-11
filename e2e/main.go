@@ -27,26 +27,27 @@ func (m *E2E) Run(
 	ctx context.Context,
 	//+default="[]"
 	only []string,
-) error {
-	tests := map[string]bool{}
+) (string, error) {
+	allTests := map[string]func(context.Context) error{
+		"aws":   m.TestAws,
+		"local": m.TestLocal,
+	}
 
 	if len(only) == 0 {
-		only = []string{"aws", "local"}
+		for test := range allTests {
+			only = append(only, test)
+		}
 	}
 
 	for _, test := range only {
-		tests[test] = true
+		assert.NoError(t, allTests[test](ctx), "Test `%s` failed", test)
 	}
 
-	if tests["local"] {
-		assert.NoError(t, m.TestLocal(ctx), "TestLocal")
+	if err := t.Check(); err != nil {
+		return "", err
 	}
 
-	if tests["aws"] {
-		assert.NoError(t, m.TestAws(ctx), "TestAws")
-	}
-
-	return t.Check()
+	return "✅ No tests failed", nil
 }
 
 func (m *E2E) Build(ctx context.Context,
