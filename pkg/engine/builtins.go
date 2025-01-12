@@ -46,7 +46,7 @@ func builtinTotpVerify(_ topdown.BuiltinContext, op *ast.Term) (*ast.Term, error
 
 	var code string
 	var secret string
-	var skew uint = 1
+	var skew uint
 	var period uint
 	var t time.Time = time.Now()
 
