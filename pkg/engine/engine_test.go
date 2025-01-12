@@ -5,9 +5,11 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/ezoidc/ezoidc/pkg/models"
 	"github.com/gin-gonic/gin"
+	"github.com/pquerna/otp/totp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
@@ -198,6 +200,8 @@ func TestPrintLevels(t *testing.T) {
 		`,
 	}
 	buf := &bytes.Buffer{}
+	previous := log.Logger
+	defer func() { log.Logger = previous }()
 	log.Logger = zerolog.New(buf)
 
 	e := NewEngine(cfg)
@@ -211,8 +215,6 @@ func TestPrintLevels(t *testing.T) {
 	assert.Contains(t, buf.String(), `{"level":"debug","request_id":"123","location":"policy.rego:6","message":"msg"}`)
 	assert.Contains(t, buf.String(), `{"level":"error","request_id":"123","location":"policy.rego:7","message":"msg"}`)
 	assert.Contains(t, buf.String(), `{"level":"debug","request_id":"123","location":"policy.rego:8","message":"asdf: msg"}`)
-
-	log.Logger = zerolog.Nop()
 }
 
 func TestDuplicateVariables(t *testing.T) {
@@ -236,4 +238,112 @@ func TestDuplicateVariables(t *testing.T) {
 	assert.ElementsMatch(t, []models.Variable{
 		{Name: "dupe", Value: models.VariableValue{String: "define"}, Export: "VAR"},
 	}, output.Variables)
+}
+
+func TestTotpVerify(t *testing.T) {
+	ctx := context.TODO()
+	k, _ := totp.Generate(totp.GenerateOpts{
+		Issuer:      "test",
+		AccountName: "test",
+	})
+	now, _ := time.Parse(time.RFC3339, "2023-01-01T00:00:00Z")
+	code, _ := totp.GenerateCode(k.Secret(), now)
+	cfg := &models.Configuration{
+		Policy: `
+			allow.read("allowed")
+			allow.internal("secret")
+
+			define.allowed.value = "true" if {
+				totp_verify(object.union({"secret": read("secret")}, params))
+			} else := "false"
+		`,
+		Variables: []models.Variable{
+			{Name: "secret", Value: models.VariableValue{Provider: "string", ID: k.Secret()}},
+		},
+	}
+	e := NewEngine(cfg)
+	err := e.Compile(ctx)
+	assert.NoError(t, err)
+
+	cases := map[string]struct {
+		params   map[string]any
+		expected string
+	}{
+		"valid": {
+			params: map[string]any{
+				"code":   code,
+				"skew":   0,
+				"period": 30,
+				"time":   now.UnixNano(),
+			},
+			expected: "true",
+		},
+		"expire_soon": {
+			params: map[string]any{
+				"code":   code,
+				"skew":   0,
+				"period": 30,
+				"time":   now.Add(time.Second * 29).UnixNano(),
+			},
+			expected: "true",
+		},
+		"invalid_future_code": {
+			params: map[string]any{
+				"code":   code,
+				"skew":   0,
+				"period": 30,
+				"time":   now.Add(-time.Second * 30).UnixNano(),
+			},
+			expected: "false",
+		},
+		"invalid_past_code": {
+			params: map[string]any{
+				"code":   code,
+				"skew":   0,
+				"period": 30,
+				"time":   now.Add(time.Second * 30).UnixNano(),
+			},
+			expected: "false",
+		},
+		"valid_future_skew": {
+			params: map[string]any{
+				"code":   code,
+				"skew":   1,
+				"period": 30,
+				"time":   now.Add(time.Second * 59).UnixNano(),
+			},
+			expected: "true",
+		},
+		"invalid_future_skew": {
+			params: map[string]any{
+				"code":   code,
+				"skew":   1,
+				"period": 30,
+				"time":   now.Add(time.Second * 60).UnixNano(),
+			},
+			expected: "false",
+		},
+		"no_params": {
+			params:   map[string]any{},
+			expected: "false",
+		},
+		"invalid_type": {
+			params: map[string]any{
+				"code": 12345,
+			},
+			expected: "false",
+		},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			output, err := e.ReadVariables(ctx, &ReadRequest{
+				Params: c.params,
+			})
+			assert.NoError(t, err)
+			assert.ElementsMatch(t, []models.Variable{
+				{Name: "allowed", Value: models.VariableValue{String: c.expected}},
+			}, output.Variables)
+		})
+	}
 }
