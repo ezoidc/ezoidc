@@ -48,7 +48,7 @@ func builtinTotpVerify(_ topdown.BuiltinContext, op *ast.Term) (*ast.Term, error
 	var secret string
 	var skew uint
 	var period uint
-	var t time.Time = time.Now()
+	var t = time.Now()
 
 	err = obj.Iter(func(keyTerm *ast.Term, valueTerm *ast.Term) error {
 		key, err := builtins.StringOperand(keyTerm.Value, 1)
