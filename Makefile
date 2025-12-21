@@ -64,5 +64,5 @@ helm.push:
 test.e2e: only ?=
 test.e2e: interactive ?=
 test.e2e:
-	dagger call $(if $(interactive),-i,) -m e2e build --src .:go run $(if $(only),--only $(only),)
+	dagger call $(if $(interactive),-i,) -m e2e build --src . run $(if $(only),--only $(only),)
 

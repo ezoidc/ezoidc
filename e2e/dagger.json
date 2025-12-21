@@ -2,17 +2,5 @@
   "name": "e2e",
   "engineVersion": "v0.15.1",
   "sdk": "go",
-  "source": ".",
-  "views": [
-    {
-      "name": "go",
-      "patterns": [
-        "go.mod",
-        "go.sum",
-        "cmd",
-        "pkg",
-        "!**/*_test.go"
-      ]
-    }
-  ]
+  "source": "."
 }

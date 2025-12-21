@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var goImage = "golang:1.24-alpine@sha256:68932fa6d4d4059845c8f40ad7e654e626f3ebd3706eef7846f319293ab5cb7a"
+var goImage = "golang:1.24.6-alpine@sha256:c8c5f95d64aa79b6547f3b626eb84b16a7ce18a139e3e9ca19a8c078b85ba80d"
 
 type E2E struct {
 	Ezoidc       *dagger.File
@@ -51,6 +51,7 @@ func (m *E2E) Run(
 }
 
 func (m *E2E) Build(ctx context.Context,
+	// +ignore=["*", "!cmd/**", "!pkg/**", "!go.mod", "!go.sum", "**/*_test.go"]
 	src *dagger.Directory,
 ) (*E2E, error) {
 	goCache := dag.CacheVolume("go_cache")

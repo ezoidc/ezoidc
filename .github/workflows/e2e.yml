@@ -18,4 +18,4 @@ jobs:
       - uses: dagger/dagger-for-github@80a5b5bdc989a48577b20630d6f43e717f5b70aa # v7.0.3
         with:
           module: ./e2e
-          args: build --src .:go run
+          args: build --src . run
