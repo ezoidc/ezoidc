@@ -21,7 +21,7 @@ read(name) := var.value.string if {
 	some var in input.variables
 	var.name == name
 } else if {
-	print(sprintf("warn: read: failed to read variable '%s'", [name]))
+	print($"warn: read: failed to read variable '{name}'")
 	false
 }
 
@@ -61,16 +61,16 @@ _queries.variables_response contains object.union(vars, defs)[_] if {
 
 # Utilities
 fetch(options) := response if {
-	headers := {"User-Agent": sprintf("ezoidc/%s", [data.version])} # regal ignore:external-reference
+	headers := {"User-Agent": $"ezoidc/{data.version}"} # regal ignore:external-reference
 	request := object.union({"method": "GET", "headers": headers}, options)
 	response := _fetch_log_http_send(request)
 }
 
 _fetch_log_http_send(request) := response if {
 	response := http.send(request)
-	print(sprintf("debug: fetch: %s %s: %d", [request.method, request.url, response.status_code]))
+	print($"debug: fetch: {request.method} {request.url}: {response.status_code}")
 } else if {
-	print(sprintf("warn: fetch failed: %s %s", [request.method, request.url]))
+	print($"warn: fetch failed: {request.method} {request.url}")
 	false
 }
 
@@ -88,13 +88,13 @@ github_app_jwt(options) := token if {
 }
 
 github_app_installation_token(options) := response.token if {
-	url := sprintf("https://api.github.com/app/installations/%v/access_tokens", [options.installation_id])
+	url := $"https://api.github.com/app/installations/{options.installation_id}/access_tokens"
 	body := object.get(options, "body", {})
 	app_token := github_app_jwt(object.filter(options, ["app_id", "private_key"]))
 	response := fetch({
 		"url": url,
 		"method": "POST",
-		"headers": {"Authorization": concat(" ", ["Bearer", app_token])},
+		"headers": {"Authorization": $"Bearer {app_token}"},
 		"body": body,
 	}).body
 } else if {
@@ -103,7 +103,7 @@ github_app_installation_token(options) := response.token if {
 }
 
 cloudflare_r2_temporary_credentials(options) := response if {
-	url := sprintf("https://api.cloudflare.com/client/v4/accounts/%s/r2/temp-access-credentials", [options.account_id])
+	url := $"https://api.cloudflare.com/client/v4/accounts/{options.account_id}/r2/temp-access-credentials"
 	defaults := {
 		"bucket": object.get(options, "bucket", null),
 		"parentAccessKeyId": object.get(options, "parent_access_key_id", null),
@@ -117,7 +117,7 @@ cloudflare_r2_temporary_credentials(options) := response if {
 		"url": url,
 		"method": "POST",
 		"headers": {
-			"Authorization": sprintf("Bearer %v", [options.token]),
+			"Authorization": $"Bearer {options.token}",
 			"Content-Type": "application/json",
 		},
 		"body": body,
