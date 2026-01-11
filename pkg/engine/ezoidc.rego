@@ -2,20 +2,23 @@ package ezoidc
 
 import rego.v1
 
-# regal ignore:constant-condition
 allow.read(name) if false
 
-# regal ignore:constant-condition
 allow.internal(name) if false
 
-# regal ignore:constant-condition
 define.nil if false
 
-issuers[key] := data.issuers[key]
+issuers[key] := data.issuers[key] if {
+	some key
+}
 
-claims[key] := input.claims[key]
+claims[key] := input.claims[key] if {
+	some key
+}
 
-params[key] := input.params[key]
+params[key] := input.params[key] if {
+	some key
+}
 
 read(name) := var.value.string if {
 	some var in input.variables
@@ -27,6 +30,7 @@ read(name) := var.value.string if {
 
 variables[var.name][field] := var[field] if {
 	some var in input.variables
+	some field
 }
 
 issuer := name if {
@@ -61,7 +65,8 @@ _queries.variables_response contains object.union(vars, defs)[_] if {
 
 # Utilities
 fetch(options) := response if {
-	headers := {"User-Agent": $"ezoidc/{data.version}"} # regal ignore:external-reference
+	# regal ignore:external-reference
+	headers := {"User-Agent": $"ezoidc/{data.version}"}
 	request := object.union({"method": "GET", "headers": headers}, options)
 	response := _fetch_log_http_send(request)
 }

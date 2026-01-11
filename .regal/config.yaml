@@ -2,9 +2,9 @@ rules:
   idiomatic:
     directory-package-mismatch:
       level: ignore
-
   testing:
     print-or-trace-call:
       level: ignore
-    dubious-print-sprintf:
+  bugs:
+    constant-condition:
       level: ignore
