@@ -30,6 +30,7 @@ read(name) := var.value.string if {
 
 variables[var.name][field] := var[field] if {
 	some var in input.variables
+	some field
 }
 
 issuer := name if {
