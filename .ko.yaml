@@ -1,4 +1,4 @@
-defaultBaseImage: cgr.dev/chainguard/static:latest@sha256:1c785f2145250a80d2d71d2b026276f3358ef3543448500c72206d37ec4ece37
+defaultBaseImage: cgr.dev/chainguard/static:latest@sha256:11ec91f0372630a2ca3764cea6325bebb0189a514084463cbb3724e5bb350d14
 defaultLdflags:
 - -s -w
 - -X github.com/ezoidc/ezoidc/pkg/static.Version={{.Git.Tag}}
