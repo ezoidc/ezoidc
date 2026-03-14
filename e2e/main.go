@@ -31,6 +31,7 @@ func (m *E2E) Run(
 	allTests := map[string]func(context.Context) error{
 		"aws":   m.TestAws,
 		"local": m.TestLocal,
+		"ssh":   m.TestSSHCert,
 	}
 
 	if len(only) == 0 {
