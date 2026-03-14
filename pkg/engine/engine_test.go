@@ -3,6 +3,10 @@ package engine
 import (
 	"bytes"
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/x509"
+	"encoding/pem"
 	"os"
 	"testing"
 	"time"
@@ -13,6 +17,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/ssh"
 )
 
 var true_ = true
@@ -346,4 +351,225 @@ func TestTotpVerify(t *testing.T) {
 			}, output.Variables)
 		})
 	}
+}
+
+func TestSSHCertUserDefaults(t *testing.T) {
+	ctx := context.TODO()
+	caKeyPEM, publicKey := generateSSHCertTestKeys(t)
+
+	cfg := &models.Configuration{
+		Policy: `
+			allow.read("cert")
+			allow.internal("ca_key")
+
+			define.cert.value = ssh_certificate({
+				"ca_key": read("ca_key"),
+				"public_key": params.public_key,
+				"principals": [params.principal],
+				"key_id": params.key_id,
+			})
+		`,
+		Variables: []models.Variable{
+			{Name: "ca_key", Value: models.VariableValue{Provider: "string", ID: caKeyPEM}},
+		},
+	}
+
+	e := NewEngine(cfg)
+	err := e.Compile(ctx)
+	assert.NoError(t, err)
+
+	output, err := e.ReadVariables(ctx, &ReadRequest{
+		Params: map[string]any{
+			"public_key": publicKey,
+			"principal":  "alice",
+			"key_id":     "alice",
+		},
+	})
+	assert.NoError(t, err)
+	if !assert.Len(t, output.Variables, 1) {
+		return
+	}
+
+	cert := parseSSHCerificate(t, output.Variables[0].Value.String)
+	assert.Equal(t, uint32(ssh.UserCert), cert.CertType)
+	assert.Equal(t, "alice", cert.KeyId)
+	assert.Equal(t, []string{"alice"}, cert.ValidPrincipals)
+	assert.Equal(t, "", cert.Extensions["permit-pty"])
+	assert.Equal(t, "", cert.Extensions["permit-user-rc"])
+	assert.NotContains(t, cert.Extensions, "permit-agent-forwarding")
+	assert.Empty(t, cert.CriticalOptions)
+	assert.Equal(t, uint64((22*time.Hour)/time.Second), cert.ValidBefore-cert.ValidAfter)
+}
+
+func TestSSHCertHostCustomFields(t *testing.T) {
+	ctx := context.TODO()
+	caKeyPEM, publicKey := generateSSHCertTestKeys(t)
+	validAfter := "2025-01-01T00:00:00Z"
+
+	cfg := &models.Configuration{
+		Policy: `
+			allow.read("cert")
+			allow.internal("ca_key")
+
+			define.cert.value = ssh_certificate(object.union({
+				"ca_key": read("ca_key"),
+				"public_key": params.public_key,
+			}, params.options))
+		`,
+		Variables: []models.Variable{
+			{Name: "ca_key", Value: models.VariableValue{Provider: "string", ID: caKeyPEM}},
+		},
+	}
+
+	e := NewEngine(cfg)
+	err := e.Compile(ctx)
+	assert.NoError(t, err)
+
+	output, err := e.ReadVariables(ctx, &ReadRequest{
+		Params: map[string]any{
+			"public_key": publicKey,
+			"options": map[string]any{
+				"cert_type":   "host",
+				"key_id":      "web-01",
+				"principals":  []any{"web-01.example.com", "10.0.1.5"},
+				"valid_after": validAfter,
+				"ttl":         "24h",
+				"critical_options": map[string]any{
+					"source-address": "10.0.0.0/8",
+				},
+				"extensions": map[string]any{
+					"permit-port-forwarding": "",
+				},
+			},
+		},
+	})
+	assert.NoError(t, err)
+	if !assert.Len(t, output.Variables, 1) {
+		return
+	}
+
+	cert := parseSSHCerificate(t, output.Variables[0].Value.String)
+	parsedValidAfter, _ := time.Parse(time.RFC3339, validAfter)
+	assert.Equal(t, uint32(ssh.HostCert), cert.CertType)
+	assert.Equal(t, "web-01", cert.KeyId)
+	assert.Equal(t, []string{"web-01.example.com", "10.0.1.5"}, cert.ValidPrincipals)
+	assert.Equal(t, uint64(parsedValidAfter.Unix()), cert.ValidAfter)
+	assert.Equal(t, uint64((24*time.Hour)/time.Second), cert.ValidBefore-cert.ValidAfter)
+	assert.Equal(t, "10.0.0.0/8", cert.CriticalOptions["source-address"])
+	assert.Equal(t, "", cert.Extensions["permit-port-forwarding"])
+}
+
+func TestSSHCertExplicitEmptyExtensions(t *testing.T) {
+	ctx := context.TODO()
+	caKeyPEM, publicKey := generateSSHCertTestKeys(t)
+
+	cfg := &models.Configuration{
+		Policy: `
+			allow.read("cert")
+			allow.internal("ca_key")
+
+			define.cert.value = ssh_certificate(object.union({
+				"ca_key": read("ca_key"),
+				"public_key": params.public_key,
+			}, params.options))
+		`,
+		Variables: []models.Variable{
+			{Name: "ca_key", Value: models.VariableValue{Provider: "string", ID: caKeyPEM}},
+		},
+	}
+
+	e := NewEngine(cfg)
+	err := e.Compile(ctx)
+	assert.NoError(t, err)
+
+	output, err := e.ReadVariables(ctx, &ReadRequest{
+		Params: map[string]any{
+			"public_key": publicKey,
+			"options": map[string]any{
+				"cert_type":  "user",
+				"principals": []any{"deploy"},
+				"extensions": map[string]any{},
+			},
+		},
+	})
+	assert.NoError(t, err)
+	if !assert.Len(t, output.Variables, 1) {
+		return
+	}
+
+	cert := parseSSHCerificate(t, output.Variables[0].Value.String)
+	assert.Equal(t, uint32(ssh.UserCert), cert.CertType)
+	assert.Empty(t, cert.Extensions)
+}
+
+func TestSSHCertInvalidPublicKey(t *testing.T) {
+	ctx := context.TODO()
+	caKeyPEM, _ := generateSSHCertTestKeys(t)
+
+	cfg := &models.Configuration{
+		Policy: `
+			allow.read("cert")
+			allow.internal("ca_key")
+
+			define.cert.value = ssh_certificate({
+				"ca_key": read("ca_key"),
+				"public_key": params.public_key,
+			})
+		`,
+		Variables: []models.Variable{
+			{Name: "ca_key", Value: models.VariableValue{Provider: "string", ID: caKeyPEM}},
+		},
+	}
+
+	e := NewEngine(cfg)
+	err := e.Compile(ctx)
+	assert.NoError(t, err)
+
+	output, err := e.ReadVariables(ctx, &ReadRequest{
+		Params: map[string]any{
+			"public_key": "not-a-valid-key",
+		},
+	})
+	assert.NoError(t, err)
+	if assert.Len(t, output.Variables, 1) {
+		assert.Equal(t, "cert", output.Variables[0].Name)
+		assert.Equal(t, "", output.Variables[0].Value.String)
+	}
+}
+
+func generateSSHCertTestKeys(t *testing.T) (string, string) {
+	t.Helper()
+
+	_, caPrivateKey, err := ed25519.GenerateKey(rand.Reader)
+	assert.NoError(t, err)
+
+	caPrivateBytes, err := x509.MarshalPKCS8PrivateKey(caPrivateKey)
+	assert.NoError(t, err)
+
+	caPrivatePEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: caPrivateBytes,
+	})
+
+	clientPublicKey, _, err := ed25519.GenerateKey(rand.Reader)
+	assert.NoError(t, err)
+
+	sshClientPublicKey, err := ssh.NewPublicKey(clientPublicKey)
+	assert.NoError(t, err)
+
+	return string(caPrivatePEM), string(ssh.MarshalAuthorizedKey(sshClientPublicKey))
+}
+
+func parseSSHCerificate(t *testing.T, cert string) *ssh.Certificate {
+	t.Helper()
+
+	publicKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(cert))
+	assert.NoError(t, err)
+
+	sshCert, ok := publicKey.(*ssh.Certificate)
+	if !assert.True(t, ok) {
+		return nil
+	}
+
+	return sshCert
 }

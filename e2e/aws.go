@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var localstackImage = "localstack/localstack:latest@sha256:3e866c07ada717485f915fd3f880ec94e3acd41c894cca053b08797e50f5704e"
-var baseImage = "alpine:latest@sha256:beefdbd8a1da6d2915566fde36db9db0b524eb737fc57cd1367effd16dc0d06d"
+var localstackImage = "localstack/localstack@sha256:1a27b99734456054146e284d1de44af5d72b9f66a62f8a1fd1e74dc328019ba8"
+var baseImage = "alpine:latest@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659"
 
 func (m *E2E) Localstack() *dagger.Service {
 	localstackInit := "#!/bin/sh\nset -e\n"
