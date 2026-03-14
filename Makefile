@@ -1,7 +1,13 @@
 TARGETS := ezoidc ezoidc-server
 SRC := $(shell find pkg cmd -name '*.go' -not -path '*_test.go')
 
-.PHONY: build clean format lint test coverage ko.push lint.rego lint.go format.rego format.go
+.DEFAULT_GOAL := default
+
+.PHONY: default build clean format lint test coverage ko.push helm.push test.e2e lint.rego lint.go format.rego format.go
+
+default:
+	@echo "Available targets:"
+	@awk 'BEGIN { FS = ":" } /^[a-zA-Z0-9_.-]+:/ { if ($$1 !~ /^\./ && $$1 != "default") print "  " $$1 }' $(MAKEFILE_LIST) | sort -u
 
 build: $(TARGETS)
 
