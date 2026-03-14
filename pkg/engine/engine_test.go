@@ -390,7 +390,7 @@ func TestSSHCertUserDefaults(t *testing.T) {
 		return
 	}
 
-	cert := parseSSHCerificate(t, output.Variables[0].Value.String)
+	cert := parseSSHCertificate(t, output.Variables[0].Value.String)
 	assert.Equal(t, uint32(ssh.UserCert), cert.CertType)
 	assert.Equal(t, "alice", cert.KeyId)
 	assert.Equal(t, []string{"alice"}, cert.ValidPrincipals)
@@ -448,7 +448,7 @@ func TestSSHCertHostCustomFields(t *testing.T) {
 		return
 	}
 
-	cert := parseSSHCerificate(t, output.Variables[0].Value.String)
+	cert := parseSSHCertificate(t, output.Variables[0].Value.String)
 	parsedValidAfter, _ := time.Parse(time.RFC3339, validAfter)
 	assert.Equal(t, uint32(ssh.HostCert), cert.CertType)
 	assert.Equal(t, "web-01", cert.KeyId)
@@ -497,7 +497,7 @@ func TestSSHCertExplicitEmptyExtensions(t *testing.T) {
 		return
 	}
 
-	cert := parseSSHCerificate(t, output.Variables[0].Value.String)
+	cert := parseSSHCertificate(t, output.Variables[0].Value.String)
 	assert.Equal(t, uint32(ssh.UserCert), cert.CertType)
 	assert.Empty(t, cert.Extensions)
 }
@@ -560,7 +560,7 @@ func generateSSHCertTestKeys(t *testing.T) (string, string) {
 	return string(caPrivatePEM), string(ssh.MarshalAuthorizedKey(sshClientPublicKey))
 }
 
-func parseSSHCerificate(t *testing.T, cert string) *ssh.Certificate {
+func parseSSHCertificate(t *testing.T, cert string) *ssh.Certificate {
 	t.Helper()
 
 	publicKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(cert))

@@ -263,11 +263,7 @@ func builtinSSHCert(_ topdown.BuiltinContext, op *ast.Term) (*ast.Term, error) {
 		return nil, err
 	}
 
-	validBefore, err := addValidityTTL(validAfter, ttl)
-	if err != nil {
-		return nil, builtins.NewOperandErr(1, "invalid validity window: %v", err)
-	}
-
+	validBefore := validAfter + uint64(ttl.Seconds())
 	cert := &ssh.Certificate{
 		Nonce:           nonce,
 		Key:             publicKey,
@@ -353,15 +349,4 @@ func argStringMap(key ast.String, value *ast.Term) (map[string]string, error) {
 		return nil, err
 	}
 	return out, nil
-}
-
-func addValidityTTL(validAfter uint64, ttl time.Duration) (uint64, error) {
-	ttlSeconds := ttl / time.Second
-	if ttlSeconds <= 0 {
-		return 0, fmt.Errorf("ttl must be at least one second")
-	}
-	if uint64(ttlSeconds) > ^uint64(0)-validAfter {
-		return 0, fmt.Errorf("ttl overflows validity window")
-	}
-	return validAfter + uint64(ttlSeconds), nil
 }
