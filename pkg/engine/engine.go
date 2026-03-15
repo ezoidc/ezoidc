@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	_ "github.com/ezoidc/ezoidc/pkg/engine/builtins"
 	"github.com/ezoidc/ezoidc/pkg/models"
 	"github.com/ezoidc/ezoidc/pkg/providers"
 	"github.com/ezoidc/ezoidc/pkg/static"
