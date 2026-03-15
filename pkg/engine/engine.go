@@ -46,6 +46,8 @@ type EngineInput struct {
 	Allow map[string]string `json:"allow"`
 	// User-provided parameters
 	Params map[string]any `json:"params"`
+	// Request metadata
+	Request map[string]any `json:"request"`
 }
 
 type ReadRequest struct {
@@ -53,6 +55,8 @@ type ReadRequest struct {
 	Claims map[string]any `json:"claims"`
 	// User-provided parameters
 	Params map[string]any `json:"params"`
+	// Request metadata
+	Request map[string]any `json:"request"`
 }
 
 type ReadResponse struct {
@@ -224,4 +228,5 @@ func (i *EngineInput) setRequest(req *ReadRequest) {
 
 	i.Claims = req.Claims
 	i.Params = req.Params
+	i.Request = req.Request
 }
