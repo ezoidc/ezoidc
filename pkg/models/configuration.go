@@ -37,6 +37,8 @@ type Configuration struct {
 	Listen string `json:"host"`
 	// Log level (debug, info, warn, error)
 	LogLevel string `yaml:"log_level"`
+	// List of trusted proxy CIDRs
+	TrustedProxies StringList `yaml:"trusted_proxies"`
 
 	issuersByUri map[string]*Issuer
 }
