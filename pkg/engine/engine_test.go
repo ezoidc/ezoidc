@@ -64,6 +64,7 @@ func TestReadVariables(t *testing.T) {
 				claims.iss = "http://test"
 				claims.custom = true
 				params.id = 123
+				net.cidr_contains("192.168.45.0/24", request.ip)
 			}
 			define.defined.value = "foo"
 			define.defined_not_allowed.value = "no"
@@ -91,6 +92,9 @@ func TestReadVariables(t *testing.T) {
 		},
 		Params: map[string]any{
 			"id": 123,
+		},
+		Request: map[string]any{
+			"ip": "192.168.45.2",
 		},
 	})
 	assert.NoError(t, err)

@@ -26,10 +26,12 @@ func NewAPI(eng *engine.Engine) *API {
 	router.Use(requestID())
 	router.Use(jsonLogs())
 
-	err := router.SetTrustedProxies(eng.Configuration.TrustedProxies)
-	if err != nil {
-		log.Warn().Err(err).Msg("no proxies will be trusted")
-		_ = router.SetTrustedProxies(nil)
+	if eng.Configuration != nil {
+		err := router.SetTrustedProxies(eng.Configuration.TrustedProxies)
+		if err != nil {
+			log.Warn().Err(err).Msg("no proxies will be trusted")
+			_ = router.SetTrustedProxies(nil)
+		}
 	}
 
 	public := router.Group("/ezoidc")
