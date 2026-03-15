@@ -4,8 +4,6 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
 	"dagger/e-2-e/internal/dagger"
 	"encoding/json"
 	"encoding/pem"
@@ -18,7 +16,7 @@ import (
 
 func (m *E2E) TestSSHCert(ctx context.Context) error {
 	issuer := NewIssuer()
-	caKeyPEM, clientPrivateKeyPEM, publicKey := generateSSHCertE2EKeys()
+	caKeyPEM, caKeyPassphrase, clientPrivateKeyPEM, publicKey := generateSSHCertE2EKeys()
 
 	config := Configuration{
 		Audience: "http://ezoidc:3501",
@@ -26,13 +24,15 @@ func (m *E2E) TestSSHCert(ctx context.Context) error {
 		Policy: `
 			allow.read("cert") if {
 				issuer = "dagger"
-			  subject = "alice"
+				subject = "alice"
 			}
 
 			allow.internal("private_ca_key")
+			allow.internal("private_ca_passphrase")
 
 			define.cert.value = ssh_certificate({
 			  "ca_key": read("private_ca_key"),
+			  "passphrase": read("private_ca_passphrase"),
 			  "public_key": params.public_key,
 			  "principals": ["sudo"],
 			  "critical_options": {
@@ -44,6 +44,11 @@ func (m *E2E) TestSSHCert(ctx context.Context) error {
 			"private_ca_key": map[string]any{
 				"value": map[string]any{
 					"string": caKeyPEM,
+				},
+			},
+			"private_ca_passphrase": map[string]any{
+				"value": map[string]any{
+					"string": caKeyPassphrase,
 				},
 			},
 		},
@@ -82,12 +87,10 @@ func (m *E2E) TestSSHCert(ctx context.Context) error {
 	variables := &Variables{}
 	_ = json.Unmarshal([]byte(output), variables)
 
-	certRaw, ok := variables.Values()["cert"]
-	if !assert.True(t, ok, "expected cert variable to be present") {
-		return nil
-	}
+	certRaw := variables.Values()["cert"]
+	assert.NotEmpty(t, certRaw, "did not get cert from server")
 
-	caSigner, err := ssh.ParsePrivateKey([]byte(caKeyPEM))
+	caSigner, err := ssh.ParsePrivateKeyWithPassphrase([]byte(caKeyPEM), []byte(caKeyPassphrase))
 	assert.NoError(t, err)
 
 	sshdConfig := strings.TrimSpace(`
@@ -129,16 +132,16 @@ LogLevel VERBOSE
 		From(baseImage).
 		WithExec([]string{"apk", "add", "--no-cache", "openssh-client"}).
 		WithServiceBinding("openssh", sshServer).
-		WithNewFile("/home/alice/.ssh/id_rsa", clientPrivateKeyPEM, dagger.ContainerWithNewFileOpts{Permissions: 0o600}).
-		WithNewFile("/home/alice/.ssh/id_rsa-cert.pub", certRaw, dagger.ContainerWithNewFileOpts{Permissions: 0o644}).
+		WithNewFile("/home/alice/.ssh/id_ed25519", clientPrivateKeyPEM, dagger.ContainerWithNewFileOpts{Permissions: 0o600}).
+		WithNewFile("/home/alice/.ssh/id_ed25519-cert.pub", certRaw, dagger.ContainerWithNewFileOpts{Permissions: 0o644}).
 		WithExec([]string{"sh", "-lc", `
 			ssh \
 				-o StrictHostKeyChecking=no \
 				-o UserKnownHostsFile=/dev/null \
 				-o IdentitiesOnly=yes \
 				-o ConnectTimeout=2 \
-				-o CertificateFile=/home/alice/.ssh/id_rsa-cert.pub \
-				-o IdentityFile=/home/alice/.ssh/id_rsa \
+				-o CertificateFile=/home/alice/.ssh/id_ed25519-cert.pub \
+				-o IdentityFile=/home/alice/.ssh/id_ed25519 \
 				alice@openssh
 		`}).
 		Stdout(ctx)
@@ -148,22 +151,18 @@ LogLevel VERBOSE
 	return nil
 }
 
-func generateSSHCertE2EKeys() (string, string, string) {
+func generateSSHCertE2EKeys() (string, string, string, string) {
+	caKeyPassphrase := "test-ca-key-passphrase"
+
 	_, caPrivateKey, _ := ed25519.GenerateKey(rand.Reader)
-	caPrivateBytes, _ := x509.MarshalPKCS8PrivateKey(caPrivateKey)
-	caPrivatePEM := pem.EncodeToMemory(&pem.Block{
-		Type:  "PRIVATE KEY",
-		Bytes: caPrivateBytes,
-	})
+	caPrivatePEMBlock, _ := ssh.MarshalPrivateKeyWithPassphrase(caPrivateKey, "ca_ed25519", []byte(caKeyPassphrase))
+	caPrivatePEM := pem.EncodeToMemory(caPrivatePEMBlock)
 
-	clientPrivateKey, _ := rsa.GenerateKey(rand.Reader, 2048)
-	clientPrivateBytes := x509.MarshalPKCS1PrivateKey(clientPrivateKey)
-	clientPrivatePEM := pem.EncodeToMemory(&pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: clientPrivateBytes,
-	})
+	clientPublicKey, clientPrivateKey, _ := ed25519.GenerateKey(rand.Reader)
+	clientPrivatePEMBlock, _ := ssh.MarshalPrivateKey(clientPrivateKey, "client_ed25519")
+	clientPrivatePEM := pem.EncodeToMemory(clientPrivatePEMBlock)
 
-	sshClientPublicKey, _ := ssh.NewPublicKey(&clientPrivateKey.PublicKey)
+	sshClientPublicKey, _ := ssh.NewPublicKey(clientPublicKey)
 
-	return string(caPrivatePEM), string(clientPrivatePEM), string(ssh.MarshalAuthorizedKey(sshClientPublicKey))
+	return string(caPrivatePEM), caKeyPassphrase, string(clientPrivatePEM), string(ssh.MarshalAuthorizedKey(sshClientPublicKey))
 }

@@ -34,6 +34,7 @@ func builtinSSHCert(_ topdown.BuiltinContext, op *ast.Term) (*ast.Term, error) {
 	}
 
 	var caKeyRaw string
+	var passphrase string
 	var publicKeyRaw string
 	var certType uint32 = ssh.UserCert
 	keyID := ""
@@ -52,6 +53,11 @@ func builtinSSHCert(_ topdown.BuiltinContext, op *ast.Term) (*ast.Term, error) {
 		switch key {
 		case "ca_key":
 			caKeyRaw, err = argString(key, valueTerm)
+			if err != nil {
+				return err
+			}
+		case "passphrase":
+			passphrase, err = argString(key, valueTerm)
 			if err != nil {
 				return err
 			}
@@ -133,7 +139,12 @@ func builtinSSHCert(_ topdown.BuiltinContext, op *ast.Term) (*ast.Term, error) {
 		return nil, builtins.NewOperandErr(1, "argument `ca_key` and `public_key` must not be empty")
 	}
 
-	caSigner, err := ssh.ParsePrivateKey([]byte(caKeyRaw))
+	var caSigner ssh.Signer
+	if passphrase != "" {
+		caSigner, err = ssh.ParsePrivateKeyWithPassphrase([]byte(caKeyRaw), []byte(passphrase))
+	} else {
+		caSigner, err = ssh.ParsePrivateKey([]byte(caKeyRaw))
+	}
 	if err != nil {
 		return nil, builtins.NewOperandErr(1, "invalid `ca_key`: %v", err)
 	}
