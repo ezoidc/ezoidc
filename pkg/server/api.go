@@ -61,6 +61,9 @@ func NewAPI(eng *engine.Engine) *API {
 		response, err := eng.ReadVariables(c, &engine.ReadRequest{
 			Claims: claims,
 			Params: body.Params,
+			Request: map[string]any{
+				"ip": c.ClientIP(),
+			},
 		})
 		if err != nil {
 			c.JSON(400, models.ErrorResponse{Error: err.Error()})
