@@ -1,0 +1,44 @@
+name: Publish PyPI Package
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
+
+      - working-directory: sdk/python
+        run: make ci
+
+  build-and-publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
+        with:
+          enable-cache: "false"
+
+      - working-directory: sdk/python
+        run: make package.build package.publish
+

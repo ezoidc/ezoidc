@@ -1,0 +1,22 @@
+[project]
+name = "ezoidc"
+version = "0.1.0"
+description = "Python SDK for ezoidc"
+authors = [
+    { name = "becojo", email = "becojo@users.noreply.github.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "aiohttp>=3.13.5",
+    "pydantic>=2.12.5",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.16,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.9",
+    "ty>=0.0.28",
+]
