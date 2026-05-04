@@ -40,6 +40,8 @@ issuer := name if {
 
 subject := claims.sub
 
+audience := claims.aud
+
 # Queries
 _queries.allowed_variables[name] := _variable_scope(name) if {
 	some name in data.variable_names
