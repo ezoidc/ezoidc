@@ -76,7 +76,11 @@ func (a *API) Run() error {
 
 func jsonLogs() gin.HandlerFunc {
 	return gin.LoggerWithFormatter(
-		func(params gin.LogFormatterParams) string {
+		func(params gin.LogFormatterParams) (_ string) {
+			if params.StatusCode == 404 {
+				return
+			}
+
 			line := log.Info().
 				Any("request_id", params.Keys["request_id"]).
 				Int("status", params.StatusCode).
@@ -108,7 +112,7 @@ func jsonLogs() gin.HandlerFunc {
 			}
 
 			line.Send()
-			return ""
+			return
 		},
 	)
 }

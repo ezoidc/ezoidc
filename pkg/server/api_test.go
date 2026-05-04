@@ -162,3 +162,33 @@ func TestMaxBodySize(t *testing.T) {
 	api.Gin.ServeHTTP(w, req)
 	assert.Equal(t, 400, w.Code)
 }
+
+func TestJSONLogs_Skips404(t *testing.T) {
+	prev := log.Logger
+	defer func() {
+		log.Logger = prev
+	}()
+
+	var buf bytes.Buffer
+	log.Logger = zerolog.New(&buf).Level(zerolog.InfoLevel)
+
+	g := gin.New()
+	g.Use(jsonLogs())
+	g.GET("/ok", func(c *gin.Context) {
+		c.JSON(200, gin.H{"ok": true})
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/missing", nil)
+	g.ServeHTTP(w, req)
+
+	assert.Equal(t, 404, w.Code)
+	assert.Empty(t, buf.String())
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/ok", nil)
+	g.ServeHTTP(w, req)
+
+	assert.Equal(t, 200, w.Code)
+	assert.NotEmpty(t, buf.String())
+}
