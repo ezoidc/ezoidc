@@ -61,6 +61,7 @@ func TestReadVariables(t *testing.T) {
 				name in {"allowed", "defined"}
 				issuer = "test"
 				subject = "read"
+				audience = "test-audience"
 				claims.iss = "http://test"
 				claims.custom = true
 				params.id = 123
@@ -87,6 +88,7 @@ func TestReadVariables(t *testing.T) {
 		Claims: map[string]any{
 			"iss":    "http://test",
 			"sub":    "read",
+			"aud":    "test-audience",
 			"custom": true,
 		},
 		Params: map[string]any{
