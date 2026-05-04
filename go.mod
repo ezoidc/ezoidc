@@ -1,6 +1,6 @@
 module github.com/ezoidc/ezoidc
 
-go 1.26.0
+go 1.25.0
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.0
