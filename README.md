@@ -1,9 +1,9 @@
 # ezoidc
+
 [![Go Reference](https://pkg.go.dev/badge/github.com/ezoidc/ezoidc.svg)](https://pkg.go.dev/github.com/ezoidc/ezoidc) &nbsp;
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE) &nbsp;
-[![Build](https://img.shields.io/github/actions/workflow/status/ezoidc/ezoidc/ci.yml?label=CI)](https://github.com/ezoidc/ezoidc/actions/workflows/ci.yml?query=branch%3Amain&label=CI) &nbsp; 
+[![Build](https://img.shields.io/github/actions/workflow/status/ezoidc/ezoidc/ci.yml?label=CI)](https://github.com/ezoidc/ezoidc/actions/workflows/ci.yml?query=branch%3Amain&label=CI) &nbsp;
 ![GitHub Tag](https://img.shields.io/github/v/tag/ezoidc/ezoidc?label=version)
-
 
 _Policy-based access control for environment variables using federated identities._
 
@@ -13,7 +13,7 @@ _Policy-based access control for environment variables using federated identitie
 
 ## Example
 
-This configuration for an ezoidc server deployed at `ezoidc.example.com` allows hosted GitHub Actions runner to access an API key if the workflow is running on the main branch of the repository `org/repo`.
+This configuration for an ezoidc server deployed at `ezoidc.example.com` allows a hosted GitHub Actions runner to access an API key if the workflow is running on the main branch of the repository `org/repo`.
 
 ```yaml
 policy: |
@@ -50,6 +50,32 @@ jobs:
       - run: |
           echo "make use of $API_KEY"
 ```
+
+## Features
+
+### Variables Providers
+
+The server may be configured to fetch variables values from external sources rather than storing them directly in the configuration file. See [variable providers documentation](https://docs.ezoidc.dev/server/providers/) for more details.
+
+| Provider | Description |
+| --- | --- |
+| `file` | The variable value is read from a file on the server's filesystem. |
+| `env` | The variable value is read from an environment variable on the server. |
+| `aws.ssm` | The variable value is fetched from AWS Systems Manager Parameter Store. |
+| `kubernetes.secret` | The variable value is fetched from a Kubernetes Secret. |
+
+## Utilities
+
+To help implement least-privileged access, ezoidc can be used to generate short-lived just-in-time credentials for various platforms. This allows you to avoid long-lived credentials and only grant access when the workload needs it. See [policy documentation](https://docs.ezoidc.dev/server/policy/#utilities) for more details.
+
+| Function | Description |
+| --- | --- |
+| `cloudflare_r2_temporary_credentials` | Generates temporary credentials for Cloudflare R2. |
+| `fetch` | Wrapper over `http.send` to fetch a URL. |
+| `github_app_installation_token` | Generates an installation access token for a GitHub App. |
+| `io.jwt.encode_sign` | Rego built-in to encode and sign a JWT. |
+| `providers.aws.sign_req` | Rego built-in to sign requests using AWS Signature Version 4. |
+| `ssh_certificate` | Generates a short-lived SSH certificate. |
 
 ## Installation
 
