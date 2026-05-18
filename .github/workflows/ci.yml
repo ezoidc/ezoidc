@@ -27,17 +27,9 @@ jobs:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
         with:
           persist-credentials: false
-      - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
+      - uses: open-policy-agent/setup-regal@761188c3b435761fa254beca508a44875619648f # v2.0.0
         with:
-          go-version-file: 'go.mod'
-      - uses: StyraInc/setup-regal@33a142b1189004e0f14bf42b15972c67eecce776 # v1
-        with:
-          version: 0.38.0
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@971e284b6050e8a5849b72094c50ab08da042db8 # v6
-        with:
-          version: v2.7.2
-          args: --timeout=10m
+          version: 0.40.0
       - run: |
           make lint.rego
 
