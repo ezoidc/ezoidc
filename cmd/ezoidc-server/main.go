@@ -9,6 +9,7 @@ import (
 
 	"github.com/ezoidc/ezoidc/pkg/engine"
 	"github.com/ezoidc/ezoidc/pkg/models"
+	"github.com/ezoidc/ezoidc/pkg/providers"
 	"github.com/ezoidc/ezoidc/pkg/server"
 	"github.com/ezoidc/ezoidc/pkg/static"
 	"github.com/gin-gonic/gin"
@@ -43,6 +44,11 @@ var startCmd = &cobra.Command{
 		err = config.PreloadJWKS(ctx)
 		if err != nil {
 			return err
+		}
+
+		err = providers.ConfigureKubernetesIssuer(ctx, config)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to load k8s issuer")
 		}
 
 		eng := engine.NewEngine(config)

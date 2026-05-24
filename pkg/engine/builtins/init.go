@@ -31,6 +31,17 @@ func init() {
 		}
 		return ret, nil
 	})
+
+	rego.RegisterBuiltin1(kubernetesServiceAccountToken, func(bctx rego.BuiltinContext, op *ast.Term) (*ast.Term, error) {
+		ret, err := builtinKubernetesServiceAccountToken(bctx, op)
+		if err != nil {
+			log.Warn().
+				Str("location", bctx.Location.String()).
+				Msgf("%s: %v", kubernetesServiceAccountToken.Name, err)
+			return nil, err
+		}
+		return ret, nil
+	})
 }
 
 func argError(key string, got *ast.Term, expected string) error {

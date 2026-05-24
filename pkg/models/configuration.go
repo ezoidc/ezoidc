@@ -9,10 +9,7 @@ import (
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
-	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 var HTTPClient = &http.Client{Timeout: time.Second * 10}
@@ -110,67 +107,7 @@ func (c *Configuration) PreloadJWKS(ctx context.Context) error {
 			return err
 		}
 	}
-	c.detectK8s(ctx)
 	return nil
-}
-
-func (c *Configuration) detectK8s(ctx context.Context) {
-	if c.Issuers["k8s"] != nil {
-		return
-	}
-
-	i, err := getK8sIssuer(ctx)
-	if err != nil && err != rest.ErrNotInCluster {
-		log.Error().Err(err).Msg("failed to load k8s issuer")
-	} else {
-		c.Issuers["k8s"] = &i
-	}
-
-}
-
-func getK8sIssuer(ctx context.Context) (i Issuer, err error) {
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return i, err
-	}
-
-	client, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return i, err
-	}
-
-	req := client.RESTClient().Get().AbsPath("/.well-known/openid-configuration")
-	resp, err := req.DoRaw(ctx)
-	if err != nil {
-		return i, err
-	}
-	var oidcConfig struct {
-		Issuer  string `json:"issuer"`
-		JwksUri string `json:"jwks_uri"`
-	}
-	err = json.Unmarshal(resp, &oidcConfig)
-	if err != nil {
-		return i, err
-	}
-	i.Issuer = oidcConfig.Issuer
-
-	req = client.RESTClient().Get().AbsPath("/openid/v1/jwks")
-	resp, err = req.DoRaw(ctx)
-	if err != nil {
-		return i, err
-	}
-	i.JWKSURI = oidcConfig.JwksUri
-	i.Name = "k8s"
-
-	var jwks jose.JSONWebKeySet
-	err = json.Unmarshal(resp, &jwks)
-	if err != nil {
-		return i, fmt.Errorf("failed to unmarshal k8s jwks: %w", err)
-	}
-	log.Debug().Any("issuer", i).Msg("loaded k8s issuer")
-	i.JWKS = (*JWKS)(&jwks)
-
-	return i, nil
 }
 
 func (o *JWKS) UnmarshalYAML(node *yaml.Node) error {
