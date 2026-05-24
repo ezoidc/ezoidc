@@ -11,6 +11,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/types"
 	authv1 "k8s.io/api/authentication/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -35,8 +36,15 @@ type inClusterKubernetesServiceAccountTokenClient struct {
 	client kubernetes.Interface
 }
 
-func (c *inClusterKubernetesServiceAccountTokenClient) CreateToken(ctx context.Context, namespace string, serviceAccount string, tokenRequest *authv1.TokenRequest) (string, error) {
-	resp, err := c.client.CoreV1().ServiceAccounts(namespace).CreateToken(ctx, serviceAccount, tokenRequest, v1.CreateOptions{})
+func (c *inClusterKubernetesServiceAccountTokenClient) CreateToken(
+	ctx context.Context,
+	namespace string,
+	serviceAccount string,
+	tokenRequest *authv1.TokenRequest,
+) (string, error) {
+	resp, err := c.client.CoreV1().
+		ServiceAccounts(namespace).
+		CreateToken(ctx, serviceAccount, tokenRequest, v1.CreateOptions{})
 	if err != nil {
 		return "", err
 	}
@@ -61,6 +69,9 @@ func builtinKubernetesServiceAccountToken(_ topdown.BuiltinContext, op *ast.Term
 	serviceAccount := ""
 	namespace := ""
 	audiences := []string{}
+	boundObjectKind := ""
+	boundObjectName := ""
+	boundObjectUID := ""
 	var expirationSeconds int64
 
 	err = obj.Iter(func(keyTerm *ast.Term, valueTerm *ast.Term) error {
@@ -90,6 +101,21 @@ func builtinKubernetesServiceAccountToken(_ topdown.BuiltinContext, op *ast.Term
 			if err != nil {
 				return err
 			}
+		case "bound_object_kind":
+			boundObjectKind, err = argString(key, valueTerm)
+			if err != nil {
+				return err
+			}
+		case "bound_object_name":
+			boundObjectName, err = argString(key, valueTerm)
+			if err != nil {
+				return err
+			}
+		case "bound_object_uid":
+			boundObjectUID, err = argString(key, valueTerm)
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	})
@@ -100,20 +126,36 @@ func builtinKubernetesServiceAccountToken(_ topdown.BuiltinContext, op *ast.Term
 	if serviceAccount == "" {
 		return nil, builtins.NewOperandErr(1, "argument `service_account` must not be empty")
 	}
+
 	if namespace == "" {
 		namespace = providers.CurrentKubernetesNamespace()
 	}
+
 	if expirationSeconds < 0 {
 		return nil, builtins.NewOperandErr(1, "argument `expiration_seconds` must be greater than or equal to 0")
 	}
 
+	hasBoundObject := boundObjectKind != "" || boundObjectName != "" || boundObjectUID != ""
+	if hasBoundObject && (boundObjectKind == "" || boundObjectName == "" || boundObjectUID == "") {
+		return nil, builtins.NewOperandErr(1, "arguments `bound_object_kind`, `bound_object_name`, and `bound_object_uid` must be provided together")
+	}
+
 	tokenRequest := &authv1.TokenRequest{}
-	if len(audiences) > 0 || expirationSeconds > 0 {
+	if len(audiences) > 0 || expirationSeconds > 0 || hasBoundObject {
 		tokenRequest.Spec = authv1.TokenRequestSpec{
 			Audiences: audiences,
 		}
+
 		if expirationSeconds > 0 {
 			tokenRequest.Spec.ExpirationSeconds = &expirationSeconds
+		}
+
+		if hasBoundObject {
+			tokenRequest.Spec.BoundObjectRef = &authv1.BoundObjectReference{
+				Kind: boundObjectKind,
+				Name: boundObjectName,
+				UID:  k8stypes.UID(boundObjectUID),
+			}
 		}
 	}
 
