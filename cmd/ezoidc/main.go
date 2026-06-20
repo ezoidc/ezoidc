@@ -2,7 +2,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -51,7 +50,7 @@ var variablesJsonCmd = &cobra.Command{
 	Short: "Read variables in JSON format",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		variablesResponse, err := client.NewAPIClient(http.DefaultClient, state.host).
-			GetVariables(context.Background(), &models.VariablesRequest{
+			GetVariables(cmd.Context(), &models.VariablesRequest{
 				Token:  state.token,
 				Params: state.params,
 			})
@@ -68,7 +67,7 @@ var variablesEnvCmd = &cobra.Command{
 	Short: "Read variables in ENV format",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		variablesResponse, err := client.NewAPIClient(http.DefaultClient, state.host).
-			GetVariables(context.Background(), &models.VariablesRequest{
+			GetVariables(cmd.Context(), &models.VariablesRequest{
 				Token:  state.token,
 				Params: state.params,
 			})
@@ -96,7 +95,7 @@ var variablesExecCmd = &cobra.Command{
 	Short: "Execute a command with environment variables set",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		variablesResponse, err := client.NewAPIClient(http.DefaultClient, state.host).
-			GetVariables(context.Background(), &models.VariablesRequest{
+			GetVariables(cmd.Context(), &models.VariablesRequest{
 				Token:  state.token,
 				Params: state.params,
 			})
