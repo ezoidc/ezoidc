@@ -3,13 +3,11 @@ package providers
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/rs/zerolog/log"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 type KubernetesSecretsClient interface {
@@ -22,7 +20,7 @@ type KubernetesSecretsProvider struct {
 }
 
 type KubernetesClient struct {
-	Client *kubernetes.Clientset
+	Client kubernetes.Interface
 }
 
 func (c *KubernetesClient) GetSecret(ctx context.Context, namespace string, name string) (map[string][]byte, error) {
@@ -118,27 +116,13 @@ func (p *KubernetesSecretsProvider) configure() error {
 		return nil
 	}
 
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return err
-	}
-
-	client, err := kubernetes.NewForConfig(config)
+	client, err := CurrentKubernetesClient()
 	if err != nil {
 		return err
 	}
 
 	p.Client = &KubernetesClient{Client: client}
-	p.Namespace = os.Getenv("KUBERNETES_POD_NAMESPACE")
-	if p.Namespace == "" {
-		ns, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
-		if err == nil {
-			p.Namespace = string(ns)
-		} else {
-			log.Debug().Msg("failed to obtain current kubernetes namespace, using default")
-			p.Namespace = "default"
-		}
-	}
+	p.Namespace = CurrentKubernetesNamespace()
 
 	return nil
 }
