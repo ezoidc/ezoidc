@@ -14,15 +14,18 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-var (
+const (
 	kubernetesPodNamespaceEnv = "KUBERNETES_POD_NAMESPACE"
 	kubernetesServiceHostEnv  = "KUBERNETES_SERVICE_HOST"
 	kubernetesNamespacePath   = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
-	kubernetesNamespaceOnce   sync.Once
-	kubernetesNamespace       string
-	kubernetesClientOnce      sync.Once
-	kubernetesClient          *kubernetes.Clientset
-	kubernetesClientErr       error
+)
+
+var (
+	kubernetesNamespaceOnce sync.Once
+	kubernetesNamespace     string
+	kubernetesClientOnce    sync.Once
+	kubernetesClient        *kubernetes.Clientset
+	kubernetesClientErr     error
 )
 
 func CurrentKubernetesNamespace() string {

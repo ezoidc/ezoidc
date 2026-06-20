@@ -51,7 +51,7 @@ func (c *inClusterKubernetesServiceAccountTokenClient) CreateToken(
 	return resp.Status.Token, nil
 }
 
-var newKubernetesServiceAccountTokenClient = func() (kubernetesServiceAccountTokenClient, error) {
+func newKubernetesServiceAccountTokenClient() (kubernetesServiceAccountTokenClient, error) {
 	client, err := providers.CurrentKubernetesClient()
 	if err != nil {
 		return nil, err
@@ -60,19 +60,21 @@ var newKubernetesServiceAccountTokenClient = func() (kubernetesServiceAccountTok
 	return &inClusterKubernetesServiceAccountTokenClient{client: client}, nil
 }
 
-func builtinKubernetesServiceAccountToken(_ topdown.BuiltinContext, op *ast.Term) (*ast.Term, error) {
+func builtinKubernetesServiceAccountToken(bctx topdown.BuiltinContext, op *ast.Term) (*ast.Term, error) {
 	obj, err := builtins.ObjectOperand(op.Value, 1)
 	if err != nil {
 		return nil, err
 	}
 
-	serviceAccount := ""
-	namespace := ""
-	audiences := []string{}
-	boundObjectKind := ""
-	boundObjectName := ""
-	boundObjectUID := ""
-	var expirationSeconds int64
+	var (
+		serviceAccount    string
+		namespace         string
+		audiences         []string
+		boundObjectKind   string
+		boundObjectName   string
+		boundObjectUID    string
+		expirationSeconds int64
+	)
 
 	err = obj.Iter(func(keyTerm *ast.Term, valueTerm *ast.Term) error {
 		key, err := builtins.StringOperand(keyTerm.Value, 1)
@@ -136,11 +138,8 @@ func builtinKubernetesServiceAccountToken(_ topdown.BuiltinContext, op *ast.Term
 	}
 
 	hasBoundObject := boundObjectKind != "" || boundObjectName != "" || boundObjectUID != ""
-	if hasBoundObject && (boundObjectKind == "" || boundObjectName == "" || boundObjectUID == "") {
-		return nil, builtins.NewOperandErr(1, "arguments `bound_object_kind`, `bound_object_name`, and `bound_object_uid` must be provided together")
-	}
-
 	tokenRequest := &authv1.TokenRequest{}
+
 	if len(audiences) > 0 || expirationSeconds > 0 || hasBoundObject {
 		tokenRequest.Spec = authv1.TokenRequestSpec{
 			Audiences: audiences,
@@ -164,7 +163,7 @@ func builtinKubernetesServiceAccountToken(_ topdown.BuiltinContext, op *ast.Term
 		return nil, err
 	}
 
-	token, err := client.CreateToken(context.Background(), namespace, serviceAccount, tokenRequest)
+	token, err := client.CreateToken(bctx.Context, namespace, serviceAccount, tokenRequest)
 	if err != nil {
 		return nil, err
 	}
