@@ -1,6 +1,15 @@
 {
   "name": "e2e",
-  "engineVersion": "v0.15.1",
-  "sdk": "go",
-  "source": "."
+  "engineVersion": "v0.21.7",
+  "sdk": {
+    "source": "go"
+  },
+  "dependencies": [
+    {
+      "name": "kind",
+      "source": "github.com/neticdk/daggerverse/modules/kind@main",
+      "pin": "fce933020985aad049fd4de06b7a36bce7808cc2"
+    }
+  ],
+  "disableDefaultFunctionCaching": true
 }

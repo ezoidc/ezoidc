@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"dagger/e-2-e/internal/dagger"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -12,6 +13,8 @@ var goImage = "golang:alpine"
 type E2E struct {
 	Ezoidc       *dagger.File
 	EzoidcServer *dagger.File
+	dockerSocket *dagger.Socket
+	HelmChart    *dagger.Directory
 }
 
 func (m *E2E) Prebuilt(ctx context.Context,
@@ -27,9 +30,13 @@ func (m *E2E) Run(
 	ctx context.Context,
 	//+default="[]"
 	only []string,
+	//+optional
+	dockerSocket *dagger.Socket,
 ) (string, error) {
+	m.dockerSocket = dockerSocket
 	allTests := map[string]func(context.Context) error{
 		"aws":   m.TestAws,
+		"k8s":   m.TestK8s,
 		"local": m.TestLocal,
 		"ssh":   m.TestSSHCert,
 	}
@@ -52,7 +59,7 @@ func (m *E2E) Run(
 }
 
 func (m *E2E) Build(ctx context.Context,
-	// +ignore=["*", "!cmd/**", "!pkg/**", "!go.mod", "!go.sum", "**/*_test.go"]
+	// +ignore=["*", "!cmd/**", "!pkg/**", "!go.mod", "!go.sum", "**/*_test.go", "!chart/**"]
 	src *dagger.Directory,
 ) (*E2E, error) {
 	goCache := dag.CacheVolume("go_cache")
@@ -60,7 +67,7 @@ func (m *E2E) Build(ctx context.Context,
 
 	c, err := dag.Container().
 		From(goImage).
-		WithMountedDirectory("/src", src).
+		WithMountedDirectory("/src", src.WithoutDirectory("chart")).
 		WithMountedCache("/go/pkg/mod", goCache).
 		WithMountedCache("/root/.cache/go-build", buildCache).
 		WithWorkdir("/src").
@@ -74,5 +81,10 @@ func (m *E2E) Build(ctx context.Context,
 
 	m.Ezoidc = c.File("ezoidc")
 	m.EzoidcServer = c.File("ezoidc-server")
+	m.HelmChart = src.Directory("chart")
 	return m, nil
+}
+
+func cacheBuster(d *dagger.Container) *dagger.Container {
+	return d.WithEnvVariable("CACHE", time.Now().String())
 }
