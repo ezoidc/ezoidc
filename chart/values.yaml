@@ -4,7 +4,7 @@ config: |
   policy: |
     allow.read("success")
   audience: http://127.0.0.1:3501
-  variables: 
+  variables:
     success: 'true'
   issuers: {}
 
@@ -53,7 +53,7 @@ podLabels: {}
 podSecurityContext: {}
   # fsGroup: 2000
 
-securityContext: 
+securityContext:
   capabilities:
     drop: [ALL]
   readOnlyRootFilesystem: true

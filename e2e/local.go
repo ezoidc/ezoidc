@@ -4,7 +4,6 @@ import (
 	"context"
 	"dagger/e-2-e/internal/dagger"
 	"encoding/json"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -59,7 +58,7 @@ func (m *E2E) TestLocal(ctx context.Context) error {
 			"aud": []string{"http://ezoidc:3501"},
 			"sub": "foo",
 		})).
-		WithEnvVariable("CACHE", time.Now().String()).
+		With(cacheBuster).
 		WithExec([]string{"/bin/ezoidc", "variables", "json"}).
 		Stdout(ctx)
 	assert.NoError(t, err)

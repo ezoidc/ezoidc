@@ -5,7 +5,6 @@ import (
 	"dagger/e-2-e/internal/dagger"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -131,7 +130,7 @@ func waitForLocalstack(ctx context.Context, srv *dagger.Service) error {
 	_, err := dag.Container().
 		From(localstackImage).
 		WithServiceBinding("localstack", srv).
-		WithEnvVariable("CACHE", time.Now().String()).
+		With(cacheBuster).
 		WithExec([]string{"bash", "-c", `
 			while ! curl -s http://localstack:4566/_localstack/init/ready | tee /dev/stderr | grep -q SUCCESSFUL; do
 				echo "waiting for localstack..."
