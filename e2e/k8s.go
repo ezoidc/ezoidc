@@ -28,7 +28,7 @@ func (m *E2E) TestK8s(ctx context.Context) error {
 	defer cluster.Delete(ctx)
 
 	kube := dag.Container().From(baseImage).
-		WithExec([]string{"apk", "add", "--no-cache", "kubectl", "helm", "skopeo"}).
+		WithExec([]string{"apk", "add", "--no-cache", "kubectl", "helm"}).
 		WithFile("/usr/bin/ezoidc", m.Ezoidc).
 		WithMountedDirectory("/chart", m.HelmChart).
 		WithEnvVariable("KUBECONFIG", "/etc/kubeconfig").
@@ -47,19 +47,17 @@ func (m *E2E) TestK8s(ctx context.Context) error {
 	}).Sync(ctx)
 
 	// build the server container
+	repository := "ghcr.io/ezoidc/ezoidc/server"
+	tag := "e2e"
 	serverContainer := dag.Container().
 		WithFile("/ezoidc-server", m.EzoidcServer).
 		WithEntrypoint([]string{"/ezoidc-server", "start", "--config", "/config.yaml"}).
+		WithAnnotation("io.containerd.image.name", repository+":"+tag).
 		AsTarball()
 
 	// and load it into the cluster
-	repository := "ghcr.io/ezoidc/ezoidc/server"
-	tag := "e2e"
 	cluster.Container().
-		WithMountedFile("/server.tar",
-			kube.WithMountedFile("/input.tar", serverContainer).
-				WithExec([]string{"skopeo", "copy", "docker-archive:/input.tar", "docker-archive:/output.tar:" + repository + ":" + tag}).
-				File("output.tar")).
+		WithMountedFile("/server.tar", serverContainer).
 		With(cacheBuster).
 		WithExec([]string{"kind", "load", "image-archive", "/server.tar"}).
 		Sync(ctx)
@@ -77,7 +75,7 @@ func (m *E2E) TestK8s(ctx context.Context) error {
 
 			define.ezoidc_server_token.value = kubernetes_service_account_token({
 			  "service_account": "ezoidc",
-				"audiences": ["http://ezoidc:3501"],
+			  "audiences": ["http://ezoidc:3501"],
 			})
 		`,
 		Variables: map[string]any{
