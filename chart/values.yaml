@@ -46,6 +46,8 @@ role:
   name: ""
   # List of secrets to grant access
   namespaceSecrets: []
+  # List of service accounts to grant token creation access
+  serviceAccounts: []
 
 podAnnotations: {}
 podLabels: {}
