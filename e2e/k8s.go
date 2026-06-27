@@ -106,36 +106,9 @@ func (m *E2E) TestK8s(ctx context.Context) error {
 			"--set", "securityContext.runAsUser=1000",
 			"--set-file", "config=config.yaml",
 			"--set", "role.namespaceSecrets={app-secret}",
+			"--set", "role.serviceAccounts={ezoidc}",
 			"--timeout", "1m",
 		}).Sync(ctx)
-	if err != nil {
-		return err
-	}
-
-	// add a role to allow ezoidc-server to create tokens
-	_, err = kube.With(kubectlApply(`
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: ezoidc-token-creator
-rules:
-  - apiGroups: [""]
-    resources: ["serviceaccounts/token"]
-    verbs: ["create"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: ezoidc-token-creator
-subjects:
-  - kind: ServiceAccount
-    name: ezoidc
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: ezoidc-token-creator
-`)).Sync(ctx)
-
 	if err != nil {
 		return err
 	}
