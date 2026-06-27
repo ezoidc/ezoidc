@@ -4,4 +4,4 @@ description: A Helm chart for ezoidc-server
 
 type: application
 version: 1.0.1
-appVersion: "v0.6.0"
+appVersion: "v0.6.1"
