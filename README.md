@@ -70,12 +70,13 @@ To help implement least-privileged access, ezoidc can be used to generate short-
 
 | Function | Description |
 | --- | --- |
-| `cloudflare_r2_temporary_credentials` | Generates temporary credentials for Cloudflare R2. |
-| `fetch` | Wrapper over `http.send` to fetch a URL. |
-| `github_app_installation_token` | Generates an installation access token for a GitHub App. |
-| `io.jwt.encode_sign` | Rego built-in to encode and sign a JWT. |
-| `providers.aws.sign_req` | Rego built-in to sign requests using AWS Signature Version 4. |
-| `ssh_certificate` | Generates a short-lived SSH certificate. |
+| [`cloudflare_r2_temporary_credentials`](https://docs.ezoidc.dev/server/policy/#cloudflare_r2_temporary_credentials) | Generates temporary credentials for Cloudflare R2. |
+| [`fetch`](https://docs.ezoidc.dev/server/policy/#fetch) | Wrapper over `http.send` to fetch a URL. |
+| [`github_app_installation_token`](https://docs.ezoidc.dev/server/policy/#github_app_installation_token) | Generates an installation access token for a GitHub App. |
+| [`io.jwt.encode_sign`](https://docs.ezoidc.dev/server/policy/#iojwtencode_sign) | Rego built-in to encode and sign a JWT. |
+| [`kubernetes_service_account_token`](https://docs.ezoidc.dev/server/policy/#kubernetes_service_account_token) | Generates a short-lived Kubernetes service account token. |
+| [`providers.aws.sign_req`](https://docs.ezoidc.dev/server/policy/#providersawssign_req) | Rego built-in to sign requests using AWS Signature Version 4. |
+| [`ssh_certificate`](https://docs.ezoidc.dev/server/policy/#ssh_certificate) | Generates a short-lived SSH certificate. |
 
 ## Installation
 
