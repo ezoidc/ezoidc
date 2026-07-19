@@ -70,5 +70,5 @@ helm.push:
 test.e2e: only ?=
 test.e2e: interactive ?=
 test.e2e:
-	dagger call $(if $(interactive),-i,) -m e2e build --src . run $(if $(only),--only $(only),) --docker-socket /var/run/docker.sock
+	dagger call $(if $(interactive),-i,) -m e2e build --src . run $(if $(only),--only $(only),) --docker-socket /var/run/docker.sock --github-token env:EZOIDC_GITHUB_TOKEN
 

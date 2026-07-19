@@ -14,6 +14,7 @@ type E2E struct {
 	Ezoidc       *dagger.File
 	EzoidcServer *dagger.File
 	dockerSocket *dagger.Socket
+	githubToken  *dagger.Secret
 	HelmChart    *dagger.Directory
 }
 
@@ -32,13 +33,17 @@ func (m *E2E) Run(
 	only []string,
 	//+optional
 	dockerSocket *dagger.Socket,
+	//+optional
+	githubToken *dagger.Secret,
 ) (string, error) {
 	m.dockerSocket = dockerSocket
+	m.githubToken = githubToken
 	allTests := map[string]func(context.Context) error{
-		"aws":   m.TestAws,
-		"k8s":   m.TestK8s,
-		"local": m.TestLocal,
-		"ssh":   m.TestSSHCert,
+		"aws":    m.TestAws,
+		"k8s":    m.TestK8s,
+		"local":  m.TestLocal,
+		"ssh":    m.TestSSHCert,
+		"github": m.TestGithub,
 	}
 
 	if len(only) == 0 {
