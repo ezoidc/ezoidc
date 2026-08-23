@@ -2,6 +2,8 @@ package models
 
 import (
 	"encoding/json"
+	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/go-jose/go-jose/v4"
@@ -99,4 +101,22 @@ func TestReadConfiguration(t *testing.T) {
 			assert.Nil(t, actual.GetIssuer("n/a"))
 		}
 	}
+}
+
+func TestGetIssuerConcurrentUnknownIssuers(t *testing.T) {
+	actual, err := ReadConfiguration("testdata/sample.yaml")
+	assert.NoError(t, err)
+
+	var wg sync.WaitGroup
+	for i := 0; i < 1000; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			assert.Nil(t, actual.GetIssuer(fmt.Sprintf("https://evil.example/%d", i)))
+			assert.NotNil(t, actual.GetIssuer("https://id.example.com"))
+		}(i)
+	}
+	wg.Wait()
+
+	assert.Len(t, actual.Issuers, 2)
 }

@@ -34,8 +34,6 @@ type Configuration struct {
 	Listen string `json:"host"`
 	// Log level (debug, info, warn, error)
 	LogLevel string `yaml:"log_level"`
-
-	issuersByUri map[string]*Issuer
 }
 
 // Load a YAML configuration file
@@ -81,21 +79,12 @@ func ReadConfiguration(path string) (*Configuration, error) {
 
 // Get issuer by URI
 func (c *Configuration) GetIssuer(uri string) *Issuer {
-	if c.issuersByUri == nil {
-		c.issuersByUri = map[string]*Issuer{}
-	}
-	iss, ok := c.issuersByUri[uri]
-	if !ok {
-		for _, i := range c.Issuers {
-			if i.Issuer == uri {
-				c.issuersByUri[uri] = i
-				return i
-			}
+	for _, i := range c.Issuers {
+		if i.Issuer == uri {
+			return i
 		}
-		c.issuersByUri[uri] = nil
-		return nil
 	}
-	return iss
+	return nil
 }
 
 func (c *Configuration) PreloadJWKS(ctx context.Context) error {
