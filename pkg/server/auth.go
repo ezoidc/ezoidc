@@ -16,17 +16,17 @@ const (
 	ReasonInvalidClaims = "invalid:claims"
 )
 
-func BearerToken() gin.HandlerFunc {
+func BearerToken(m *Metrics) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authorization := c.GetHeader("Authorization")
 		if authorization == "" {
-			authError(c, "Authorization header is empty", ReasonInvalidJwt)
+			authError(m, c, "Authorization header is empty", ReasonInvalidJwt)
 			return
 		}
 
 		scheme, token, _ := strings.Cut(authorization, " ")
 		if scheme != "Bearer" {
-			authError(c, "Authorization header scheme must be Bearer", ReasonInvalidJwt)
+			authError(m, c, "Authorization header scheme must be Bearer", ReasonInvalidJwt)
 			return
 		}
 
@@ -34,12 +34,12 @@ func BearerToken() gin.HandlerFunc {
 	}
 }
 
-func ValidToken(config *models.Configuration) gin.HandlerFunc {
+func ValidToken(config *models.Configuration, m *Metrics) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		bearerToken := c.GetString("bearer_token")
 		token, err := jwt.ParseSigned(bearerToken, config.Algorithms)
 		if err != nil {
-			authError(c, "invalid token or algorithm", ReasonInvalidJwt)
+			authError(m, c, "invalid token or algorithm", ReasonInvalidJwt)
 			return
 		}
 
@@ -49,7 +49,7 @@ func ValidToken(config *models.Configuration) gin.HandlerFunc {
 		issuer := config.GetIssuer(claims.Issuer)
 		if issuer == nil {
 			c.Set("issuer", claims.Issuer)
-			authError(c, "invalid token issuer", reasonFromError(jwt.ErrInvalidIssuer))
+			authError(m, c, "invalid token issuer", reasonFromError(jwt.ErrInvalidIssuer))
 			return
 		}
 		c.Set("issuer", issuer.Name)
@@ -58,7 +58,7 @@ func ValidToken(config *models.Configuration) gin.HandlerFunc {
 		var validatedClaims map[string]interface{}
 		err = token.Claims(jose.JSONWebKeySet(*issuer.JWKS), &validatedClaims)
 		if err != nil {
-			authError(c, err.Error(), ReasonInvalidKid)
+			authError(m, c, err.Error(), ReasonInvalidKid)
 			return
 		}
 
@@ -69,7 +69,7 @@ func ValidToken(config *models.Configuration) gin.HandlerFunc {
 			Time:        time.Now(),
 		}, time.Minute)
 		if err != nil {
-			authError(c, err.Error(), reasonFromError(err))
+			authError(m, c, err.Error(), reasonFromError(err))
 			return
 		}
 
@@ -77,7 +77,8 @@ func ValidToken(config *models.Configuration) gin.HandlerFunc {
 	}
 }
 
-func authError(ctx *gin.Context, err string, reason string) {
+func authError(m *Metrics, ctx *gin.Context, err string, reason string) {
+	m.JWTError(reason)
 	ctx.Set("reason", reason)
 	ctx.AbortWithStatusJSON(401, gin.H{
 		"error":  err,

@@ -37,11 +37,12 @@ func TestReadConfiguration(t *testing.T) {
 		{
 			path: "sample.yaml",
 			expected: &Configuration{
-				Policy:     "allow.read(_)",
-				Listen:     "127.0.0.1:8080",
-				Algorithms: []jose.SignatureAlgorithm{"RS256", "ES256"},
-				Audience:   []string{"audience1", "audience2"},
-				LogLevel:   "warn",
+				Policy:        "allow.read(_)",
+				Listen:        "127.0.0.1:8080",
+				MetricsListen: "127.0.0.1:9999",
+				Algorithms:    []jose.SignatureAlgorithm{"RS256", "ES256"},
+				Audience:      []string{"audience1", "audience2"},
+				LogLevel:      "warn",
 				Variables: []Variable{
 					{
 						Name: "str",

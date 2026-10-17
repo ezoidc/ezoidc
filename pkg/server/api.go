@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/ezoidc/ezoidc/pkg/engine"
 	"github.com/ezoidc/ezoidc/pkg/models"
 	"github.com/gin-gonic/gin"
@@ -15,16 +17,20 @@ var APIVersion = "1.0"
 var MaxBodySize int64 = 1024 * 1024 * 5 // 5MB
 
 type API struct {
-	Gin    *gin.Engine
-	Engine *engine.Engine
+	Gin     *gin.Engine
+	Engine  *engine.Engine
+	Metrics *Metrics
 }
 
 func NewAPI(eng *engine.Engine) *API {
+	metrics := NewMetrics()
+
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(maxBodySize())
 	router.Use(requestID())
 	router.Use(jsonLogs())
+	router.Use(recordRequest(metrics))
 
 	public := router.Group("/ezoidc")
 	public.GET("/", func(c *gin.Context) {
@@ -34,7 +40,7 @@ func NewAPI(eng *engine.Engine) *API {
 		})
 	})
 
-	auth := public.Group("/1.0", BearerToken(), ValidToken(eng.Configuration))
+	auth := public.Group("/1.0", BearerToken(metrics), ValidToken(eng.Configuration, metrics))
 	auth.Match([]string{"GET", "POST"}, "/variables", func(c *gin.Context) {
 		var body models.VariablesRequest
 		if c.Request.Method == "POST" {
@@ -62,16 +68,57 @@ func NewAPI(eng *engine.Engine) *API {
 		}
 		c.Set("allowed", response.Allowed)
 
+		issuer := c.GetString("issuer")
+		for name, scope := range response.Allowed {
+			metrics.AllowVariable(issuer, name, scope)
+		}
+
 		c.JSON(200, models.VariablesResponse{Variables: response.Variables})
 	})
 
-	return &API{router, eng}
+	return &API{router, eng, metrics}
 }
 
 func (a *API) Run() error {
-	addr := a.Engine.Configuration.Listen
-	log.Info().Str("address", addr).Msg("starting api server")
-	return a.Gin.Run(addr)
+	server := &http.Server{
+		Addr:    a.Engine.Configuration.Listen,
+		Handler: a.Gin.Handler(),
+	}
+
+	g := &errgroup.Group{}
+	g.Go(func() error {
+		err := server.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
+			return err
+		}
+		return nil
+	})
+
+	if len(a.Engine.Configuration.MetricsListen) > 0 {
+		metricsServer := &http.Server{
+			Addr:    a.Engine.Configuration.MetricsListen,
+			Handler: NewMetricsAPI(a.Metrics).Handler(),
+		}
+		g.Go(func() error {
+			err := metricsServer.ListenAndServe()
+			if err != nil && err != http.ErrServerClosed {
+				return err
+			}
+			return nil
+		})
+		log.Info().Str("address", a.Engine.Configuration.MetricsListen).Msg("starting metrics server")
+	}
+
+	log.Info().Str("address", a.Engine.Configuration.Listen).Msg("starting api server")
+	return g.Wait()
+}
+
+// Metrics endpoint serving Prometheus text format
+func recordRequest(metrics *Metrics) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Next()
+		metrics.RequestRate(c.FullPath(), c.Writer.Status())
+	}
 }
 
 func jsonLogs() gin.HandlerFunc {
