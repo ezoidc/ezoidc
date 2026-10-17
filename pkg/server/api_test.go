@@ -192,3 +192,58 @@ func TestJSONLogs_Skips404(t *testing.T) {
 	assert.Equal(t, 200, w.Code)
 	assert.NotEmpty(t, buf.String())
 }
+
+func TestMetricsRecording(t *testing.T) {
+	ctx := context.TODO()
+	issuer := "http://mock"
+	audience := "http://ezoidc"
+	cfg := &models.Configuration{
+		Audience: []string{audience},
+		Issuers: map[string]*models.Issuer{
+			"mock": {
+				Name:   "mock",
+				Issuer: issuer,
+				JWKS:   &models.JWKS{Keys: jwks.Keys},
+			},
+		},
+		Algorithms: []jose.SignatureAlgorithm{"RS256"},
+		Policy:     `allow.read("api_key")`,
+		Variables: models.Variables{
+			{
+				Name: "api_key",
+				Value: models.VariableValue{
+					Provider: "string",
+					ID:       "secret",
+				},
+			},
+		},
+	}
+	e := engine.NewEngine(cfg)
+	err := e.Compile(ctx)
+	assert.NoError(t, err)
+	api := NewAPI(e)
+
+	// Unauthenticated request records a JWT error
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequestWithContext(ctx, "POST", "/ezoidc/1.0/variables", bytes.NewBuffer([]byte(`{}`)))
+	api.Gin.ServeHTTP(w, req)
+	assert.Equal(t, 401, w.Code)
+
+	// Authenticated request records the allowed variable
+	w = httptest.NewRecorder()
+	token := sign(map[string]any{
+		"iss": issuer,
+		"aud": audience,
+		"exp": time.Now().Add(time.Minute).Unix(),
+	})
+	req, _ = http.NewRequestWithContext(ctx, "POST", "/ezoidc/1.0/variables", bytes.NewBuffer([]byte(`{}`)))
+	req.Header.Set("Authorization", "Bearer "+token)
+	api.Gin.ServeHTTP(w, req)
+	assert.Equal(t, 200, w.Code)
+
+	out := scrape(t, api.Metrics)
+	assert.Contains(t, out, `ezoidc_jwt_errors_total{reason="invalid:jwt"} 1`)
+	assert.Contains(t, out, `ezoidc_variables_allowed_total{issuer="mock",scope="read",variable="api_key"} 1`)
+	assert.Contains(t, out, `ezoidc_requests_total{endpoint="/ezoidc/1.0/variables",status="200"} 1`)
+	assert.Contains(t, out, `ezoidc_requests_total{endpoint="/ezoidc/1.0/variables",status="401"} 1`)
+}

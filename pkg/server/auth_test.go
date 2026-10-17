@@ -181,8 +181,9 @@ func TestValidToken(t *testing.T) {
 	}
 
 	g := gin.Default()
-	g.Use(BearerToken())
-	g.Use(ValidToken(cfg))
+	metrics := NewMetrics()
+	g.Use(BearerToken(metrics))
+	g.Use(ValidToken(cfg, metrics))
 	g.GET("/", func(c *gin.Context) {
 		assert.Equal(t, c.GetString("issuer"), "mock")
 		assert.Equal(t, c.GetStringMap("claims")["valid"], true)
@@ -234,7 +235,7 @@ func TestBearerToken(t *testing.T) {
 	}
 
 	g := gin.Default()
-	g.Use(BearerToken())
+	g.Use(BearerToken(NewMetrics()))
 	g.GET("/", func(c *gin.Context) {
 		c.JSON(200, c.GetString("bearer_token"))
 	})

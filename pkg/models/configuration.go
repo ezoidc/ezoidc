@@ -32,6 +32,8 @@ type Configuration struct {
 	Algorithms []jose.SignatureAlgorithm `json:"algorithms"`
 	// IP address and port to listen on
 	Listen string `json:"host"`
+	// IP address and port to expose internal metrics on
+	MetricsListen string `yaml:"metrics_listen"`
 	// Log level (debug, info, warn, error)
 	LogLevel string `yaml:"log_level"`
 }
