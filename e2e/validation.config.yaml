@@ -1,0 +1,23 @@
+log_level: debug
+audience: http://localhost:8080
+listen: 0.0.0.0:3501
+metrics_listen: 0.0.0.0:9999
+
+policy: |
+  allow.read(_)
+
+variables:
+  env:
+    redact: true
+    value:
+      env: ENV_VAR
+  file:
+    value:
+      file: /file.txt
+  str:
+    value: str
+
+issuers:
+  dex:
+    issuer: http://localhost:8080/dex
+    jwks_uri: http://dex:5556/dex/keys

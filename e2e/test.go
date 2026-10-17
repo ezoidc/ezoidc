@@ -25,12 +25,13 @@ func (t *Test) Check() error {
 }
 
 type Configuration struct {
-	LogLevel  string         `yaml:"log_level"`
-	Policy    string         `json:"policy"`
-	Variables map[string]any `json:"variables"`
-	Audience  string         `json:"audience"`
-	Issuers   map[string]any `json:"issuers"`
-	Listen    string         `json:"host"`
+	LogLevel      string         `yaml:"log_level"`
+	Policy        string         `json:"policy"`
+	Variables     map[string]any `json:"variables"`
+	Audience      string         `json:"audience"`
+	Issuers       map[string]any `json:"issuers"`
+	Listen        string         `json:"host"`
+	MetricsListen string         `yaml:"metrics_listen,omitempty"`
 }
 
 type Variables struct {

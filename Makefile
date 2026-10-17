@@ -72,3 +72,16 @@ test.e2e: interactive ?=
 test.e2e:
 	dagger call $(if $(interactive),-i,) -m e2e build --src . run $(if $(only),--only $(only),) --docker-socket /var/run/docker.sock --github-token env:EZOIDC_GITHUB_TOKEN
 
+
+test.validation:
+	@echo "Server: http://localhost:8080/ezoidc"
+	@echo "Dex: http://localhost:8080/dex"
+	@echo "Metrics: http://localhost:8080/vm/vmui"
+	@echo "Email: admin@example.com"
+	@echo "Password: password"
+	@echo ""
+	@echo "Obtain a token using this command:"
+	@echo ""
+	@echo 'export EZOIDC_TOKEN=$$(curl -s localhost:8080/dex/token -d grant_type=password -d scope=openid -d username=admin@example.com -d password=password -d client_id=http://localhost:8080 -d client_secret=ezoidc-secret | jq -r .id_token)'
+
+	@dagger call -s -m e2e build --src . validation up
