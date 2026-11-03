@@ -163,7 +163,7 @@ func TestValidToken(t *testing.T) {
 				"aud": issuer,
 				"iat": time.Now().Add(2 * time.Minute).Unix(),
 			}),
-			err:    "go-jose/go-jose/jwt: validation field, token issued in the future (iat)",
+			err:    "go-jose/go-jose/jwt: validation failed, token issued in the future (iat)",
 			reason: "invalid:claims:iat",
 		},
 		{
